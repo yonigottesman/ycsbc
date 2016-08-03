@@ -23,7 +23,7 @@ GC hpGC(HazPtrCount);
 
 constexpr double readFileProportion = 0.0; //0.1;
 constexpr double readMemProportion = 1.0 - readFileProportion;
-static_assert(readFileProportion + readMemProportion == 1);
+static_assert(readFileProportion + readMemProportion == 1, "proportions sum not 1");
 
 //std::random_device rd;
 //std::mt19937 mt(rd());
