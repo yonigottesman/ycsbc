@@ -44,7 +44,8 @@ inline double RandomDouble(double min = 0.0, double max = 1.0) {
 /// Returns an ASCII code that can be printed to desplay
 ///
 inline char RandomPrintChar() {
-  return rand() % 94 + 33;
+	thread_local unsigned int tseed = rand(); // ok for initialization
+	return rand_r(&tseed) % 94 + 33;
 }
 
 class Exception : public std::exception {
