@@ -5,8 +5,11 @@ import subprocess
 import re
 import datetime
 import os
-import StringIO
-
+try:
+  import StringIO
+except ImportError:
+  from io import StringIO
+  
 resultsLock = threading.Lock()
 resultsDir = os.getenv('HOME') + '/results/'
 resultsFile = resultsDir + 'results.txt'
@@ -88,7 +91,7 @@ for bench in benchmarks:
         for inits in initsNum:
             for opers in opersNum:
                 for threads in threadsNum:
-                    opts = (['-initChunks 1'] if bench <> 'piwi' else options)
+                    opts = (['-initChunks 1'] if bench != 'piwi' else options)
                     for opt in opts:
                         print('\tinits: ' + inits + ', operations: ' + opers + ', threads: ' + threads + ', ops: ' + opt)
                         popenAndCall(bench, workload, inits, opers, threads, opt)
