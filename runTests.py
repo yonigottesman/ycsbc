@@ -33,7 +33,7 @@ def getThroughput(out):
         for line in file:
             tpline = lre.search(line)
             if tpline != None:
-                print('throughput line: {0}'.format(tpline))
+                print('Throughput line: {0}'.format(tpline))
                 throughput = tre.search(line).group()
                 return throughput
 
