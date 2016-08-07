@@ -30,12 +30,12 @@ def getThroughput(out):
 	lre = re.compile(r'Throughput')
 	tre = re.compile(r'[0-9]+')
     with open(logName) as file:
-        for line in file:
-            tpline = lre.search(line)
-            if tpline != None:
-                print('Throughput line: {0}'.format(tpline))
-                throughput = tre.search(line).group()
-                return throughput
+		for line in file:
+			tpline = lre.search(line)
+			if tpline != None:
+				print('throughput line: {0}'.format(tpline))
+				throughput = tre.search(line).group()
+				return throughput
 
 def recordRun(name, out):
 	ticks = getThroughput(name)
