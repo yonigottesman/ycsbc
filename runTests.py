@@ -6,7 +6,7 @@ import re
 import datetime
 import os
 try:
-  import StringIO
+  from cStringIO import StringIO
 except ImportError:
   from io import StringIO
   
@@ -28,7 +28,7 @@ def logOutput(name, out):
 def getThroughput(out):
 	lre = re.compile(r'Throughput')
 	tre = re.compile(r'[0-9]+')
-	s = StringIO.StringIO(out)
+	s = StringIO(out)
 	for line in s:
 		tpline = lre.search(line)
 		if tpline != None:

@@ -27,6 +27,9 @@ RocksDB::RocksDB()
 	// Optimize RocksDB. This is the easiest way to get RocksDB to perform well
 	options.IncreaseParallelism();
 	options.OptimizeLevelStyleCompaction();
+	// enable parallel writes
+	options.allow_concurrent_memtable_write = true;
+	options.enable_write_thread_adaptive_yield = true;
 	// create the DB if it's not already present
 	options.create_if_missing = true;
 
