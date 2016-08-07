@@ -24,4 +24,4 @@ requestdistribution=zipfian
 initChunks=16
 munkBytesCapacity=1024
 munkKeyBytes=16
-funkBytesCapacity=4096000
+funkBytesCapacity=4096000000
