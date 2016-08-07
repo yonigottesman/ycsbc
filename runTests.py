@@ -25,7 +25,7 @@ def logOutput(name, out):
 	f.write(out.decode('utf-8'))
 	f.close()
 
-def getThroughput(out):
+def getThroughput(name):
 	logName = resultsDir + name + '.log'
 	lre = re.compile(r'Throughput')
 	tre = re.compile(r'[0-9]+')
