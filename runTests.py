@@ -26,18 +26,19 @@ def logOutput(name, out):
 	f.close()
 
 def getThroughput(out):
+	logName = resultsDir + name + '.log'
 	lre = re.compile(r'Throughput')
 	tre = re.compile(r'[0-9]+')
-	s = StringIO(out)
-	for line in s:
-		tpline = lre.search(line)
-		if tpline != None:
-			print('throughput line: {0}'.format(tpline))
-			throughput = tre.search(line).group()
-			return throughput
+    with open(logName) as file:
+        for line in file:
+            tpline = lre.search(line)
+            if tpline != None:
+                print('throughput line: {0}'.format(tpline))
+                throughput = tre.search(line).group()
+                return throughput
 
 def recordRun(name, out):
-	ticks = getThroughput(out)
+	ticks = getThroughput(name)
 	resultsLock.acquire()
 	try:
 		f = open(resultsFile, 'a')
