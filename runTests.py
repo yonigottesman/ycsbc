@@ -29,7 +29,7 @@ def getThroughput(out):
 	logName = resultsDir + name + '.log'
 	lre = re.compile(r'Throughput')
 	tre = re.compile(r'[0-9]+')
-    with open(logName) as file:
+	with open(logName) as file:
 		for line in file:
 			tpline = lre.search(line)
 			if tpline != None:
