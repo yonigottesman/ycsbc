@@ -32,4 +32,13 @@ int PiwiDB::Insert(const string& table, const string& key,
 	return DB::kOK;
 }
 
+int PiwiDB::Read(const std::string &table, const std::string &key,
+			const std::vector<std::string> *fields, std::vector<KVPair> &result)
+{
+	string value;
+	piwi::get(key, value);
+	result.push_back(KVPair("", value));
+	return DB::kOK;
+}
+
 } /* namespace ycsbc */

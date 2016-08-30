@@ -32,6 +32,18 @@ public:
 	/// Called once per DB client (thread); there is a single DB instance globally.
 	///
 //	void Close() override;
+
+	///
+	/// Inserts a record into the database.
+	/// Field/value pairs in the specified vector are written into the record.
+	///
+	/// @param table The name of the table.
+	/// @param key The key of the record to insert.
+	/// @param values A vector of field/value pairs to insert in the record.
+	/// @return Zero on success, a non-zero error code on error.
+	///
+	int Insert(const std::string &table, const std::string &key,
+			std::vector<KVPair> &values) override;
 	///
 	/// Reads a record from the database.
 	/// Field/value pairs from the result are stored in a vector.
@@ -44,10 +56,7 @@ public:
 	///
 	int Read(const std::string &table, const std::string &key,
 			const std::vector<std::string> *fields, std::vector<KVPair> &result)
-					override {
-		std::cerr << "PiwiDB::Read not supported yet!" << std::endl;
-		return -1; // should cause an assert to fail
-	}
+					override;
 
 	///
 	/// Performs a range scan for a set of records in the database.
@@ -83,18 +92,6 @@ public:
 		std::cerr << "PiwiDB::Update not supported yet!" << std::endl;
 		return -1; // should cause an assert to fail
 	}
-
-	///
-	/// Inserts a record into the database.
-	/// Field/value pairs in the specified vector are written into the record.
-	///
-	/// @param table The name of the table.
-	/// @param key The key of the record to insert.
-	/// @param values A vector of field/value pairs to insert in the record.
-	/// @return Zero on success, a non-zero error code on error.
-	///
-	int Insert(const std::string &table, const std::string &key,
-			std::vector<KVPair> &values) override;
 	///
 	/// Deletes a record from the database.
 	///

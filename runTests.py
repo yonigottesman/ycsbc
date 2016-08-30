@@ -33,7 +33,7 @@ def getThroughput(name):
 		for line in file:
 			tpline = lre.search(line)
 			if tpline != None:
-				print('throughput line: {0}'.format(tpline))
+				print('throughput line: {0}'.format(line))
 				throughput = tre.search(line).group()
 				return throughput
 
@@ -86,6 +86,8 @@ threadsNum = ['1', '2', '4', '8', '16']
 #options = [''] # must have at least one option, possibly empty
 options = ['-initChunks 1', '-initChunks 10', '-initChunks 100']
 
+# note: on the zipfian distribution, the range of values used to generate keys is initsNum + opersNum * rateOfInsert * 2
+# also, default value size is 100 chars (probably configurable via fieldlength, not sure)
 for bench in benchmarks:
     for workload in workloads:
         print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
