@@ -9,8 +9,10 @@
 #include <cstring>
 #include <string>
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <future>
+#include <omp.h>
 #include "core/utils.h"
 #include "core/timer.h"
 #include "core/client.h"
@@ -26,7 +28,7 @@ string ParseCommandLine(int argc, const char *argv[], utils::Properties &props);
 int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const int num_ops,
     bool is_loading) {
   db->Init();
-  ycsbc::Client client(*db, *wl);
+  ycsbc::Client client(*db, *wl, num_ops);
   int oks = 0;
   for (int i = 0; i < num_ops; ++i) {
     if (is_loading) {
@@ -39,14 +41,37 @@ int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const int num_ops,
   return oks;
 }
 
+string buildReport(const ycsbc::Client& client)
+{
+	stringstream ss;
+	ss << "Main thread statistics:\n";
+	for (int i = 0; i < ycsbc::OPS_NUM; ++i)
+	{
+		double totalMean;
+		vector<double> partMeans;
+		const ycsbc::Statistics& stats = client.getStats((ycsbc::Operation)i);
+		stats.getMeans(totalMean, partMeans);
+		if (isnormal(totalMean))
+		{
+			string opName = ycsbc::OperationName((ycsbc::Operation)i);
+			ss << "Mean " << opName << " time (ms): " << totalMean
+					<< "\nPartial " << opName << " means: ";
+			for (double t : partMeans)
+				ss << t << ", ";
+			ss << "\n";
+		}
+	}
+	return ss.str();
+}
+
 size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoading,
-		ycsbc::DB* db, ycsbc::CoreWorkload& wl)
+		ycsbc::DB* db, ycsbc::CoreWorkload& wl, string& report)
 {
 	size_t oks = 0;
-#pragma omp parallel shared(db, wl) num_threads(threadsNum) reduction(+: oks)
+#pragma omp parallel shared(db, wl, report) num_threads(threadsNum) reduction(+: oks)
 	{
 		db->Init(); // per-thread initialization
-		ycsbc::Client client(*db, wl);
+		ycsbc::Client client(*db, wl, threadOps);
 		for (size_t i = 0; i < threadOps; ++i)
 		{
 			if (isLoading) {
@@ -56,6 +81,8 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
 			}
 		}
 		db->Close(); // per-thread cleanup
+		if (!isLoading && omp_get_thread_num() == 0)
+			report = buildReport(client);
 	}
 	return oks;
 }
@@ -77,18 +104,20 @@ int main(const int argc, const char *argv[]) {
   const int init_ops = stoi(props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
   cerr << "Using " << num_threads << " threads" << endl;
 
-  size_t oks = runOps(num_threads, init_ops / num_threads, true, db, wl);
+  string statsReport;
+  size_t oks = runOps(num_threads, init_ops / num_threads, true, db, wl, statsReport);
   cerr << "Loaded " << oks << " records, running workload..." << endl;
 
   // Peforms transactions
   const int total_ops = stoi(props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
   utils::Timer<double> timer;
   timer.Start();
-  oks = runOps(num_threads, total_ops / num_threads, false, db, wl);
+  oks = runOps(num_threads, total_ops / num_threads, false, db, wl, statsReport);
   double duration = timer.End();
   cerr << "[OVERALL], RunTime(ms), " << duration * 1000 << endl;
   cerr << "[OVERALL], Throughput(ops/sec), " << (uint64_t)(total_ops / duration) << endl;
   cerr << "[OVERALL], Successful ops: " << oks << " out of " << total_ops << endl;
+  cerr << statsReport << endl;
 //  cerr << "# Transaction throughput (KTPS)" << endl;
 //  cerr << props["dbname"] << '\t' << file_name << '\t' << num_threads << '\t';
 //  cerr << total_ops / duration / 1000 << endl;

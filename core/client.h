@@ -13,28 +13,45 @@
 #include "db.h"
 #include "core_workload.h"
 #include "utils.h"
+#include "statistics.h"
 
 namespace ycsbc {
 
-class Client {
- public:
-  Client(DB &db, CoreWorkload &wl) : db_(db), workload_(wl) { }
-  
-  virtual bool DoInsert();
-  virtual bool DoTransaction();
-  
-  virtual ~Client() { }
-  
- protected:
-  
-  virtual int TransactionRead();
-  virtual int TransactionReadModifyWrite();
-  virtual int TransactionScan();
-  virtual int TransactionUpdate();
-  virtual int TransactionInsert();
-  
-  DB &db_;
-  CoreWorkload &workload_;
+class Client
+{
+public:
+	Client(DB &db, CoreWorkload &wl, size_t opsNum) :
+			db_(db), workload_(wl),
+			stats(OPS_NUM, Statistics(opsNum))
+			// note: opsNum refer to all ops, while stats are gathered separately.
+			// depending on the mix, the actual number of events passed to a stats
+			// object can be much smaller than the declared.
+	{
+	}
+
+	virtual bool DoInsert();
+	virtual bool DoTransaction();
+
+	virtual ~Client()
+	{
+	}
+
+	const Statistics& getStats(Operation op) const {
+		return stats[op];
+	}
+
+protected:
+
+	virtual int TransactionRead();
+	virtual int TransactionReadModifyWrite();
+	virtual int TransactionScan();
+	virtual int TransactionUpdate();
+	virtual int TransactionInsert();
+
+	DB &db_;
+	CoreWorkload &workload_;
+	std::vector<Statistics> stats;
+	utils::Timer<double> timer; // ok since each client is used by a single thread
 };
 
 inline bool Client::DoInsert() {
@@ -46,7 +63,9 @@ inline bool Client::DoInsert() {
 
 inline bool Client::DoTransaction() {
   int status = -1;
-  switch (workload_.NextOperation()) {
+  timer.Start();
+  Operation op = workload_.NextOperation();
+  switch (op) {
     case READ:
       status = TransactionRead();
       break;
@@ -65,6 +84,7 @@ inline bool Client::DoTransaction() {
     default:
       throw utils::Exception("Operation request is not recognized!");
   }
+  stats[op].addEvent(timer.End() * 1000);
   assert(status >= 0);
   return (status == DB::kOK);
 }

@@ -25,8 +25,29 @@ enum Operation {
   READ,
   UPDATE,
   SCAN,
-  READMODIFYWRITE
+  READMODIFYWRITE,
+  OPS_NUM
 };
+
+const char* OperationName(Operation op)
+{
+	switch (op)
+	{
+	case INSERT:
+		return "Insert";
+	case READ:
+		return "Read";
+	case UPDATE:
+		return "Update";
+	case SCAN:
+		return "Scan";
+	case READMODIFYWRITE:
+		return "ReadModifyWrite";
+	case OPS_NUM:
+		break; // shut up, warning
+	}
+	return "Unknown!";
+}
 
 class CoreWorkload {
  public:
