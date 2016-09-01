@@ -70,7 +70,7 @@ def popenAndCall(bench, workload, inits, opers, threads, opt):
         try:
 #               cmd = './ycsbc -db {0} -P ./workloads/{1}.spec -threads {2} -recordcount {3} -operationcount {4} {5}' \
 #                       .format(bench, workload, threads, inits, opers, opt)
-                cmd = './ycsbc -db {0} -P ../piwi/workloads/{1}.spec -threads {2} {3} -operationcount {4}' \
+                cmd = './ycsbc -db {0} -P ../piwi/workloads/{1}.spec -threads {2} -operationcount {3} {4}' \
                         .format(bench, workload, threads, opers, opt) # inits omitted! (set in benchmark file)
                 print('\t\tStarting: ' + cmd)
                 out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
