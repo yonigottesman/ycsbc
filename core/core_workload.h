@@ -157,6 +157,13 @@ class CoreWorkload {
   static const std::string OPERATION_COUNT_PROPERTY;
 
   ///
+  /// The exact size of key.
+  /// If 0 is specified, variable sizes may be used.
+  ///
+  static const std::string EXACT_KEY_SIZE;
+  static const std::string EXACT_KEY_SIZE_DEFAULT;
+
+  ///
   /// Initialize the scenario.
   /// Called once, in the main client thread, before any operations are started.
   ///
@@ -179,7 +186,7 @@ class CoreWorkload {
       field_count_(0), read_all_fields_(false), write_all_fields_(false),
       field_len_generator_(NULL), key_generator_(NULL), key_chooser_(NULL),
       field_chooser_(NULL), scan_len_chooser_(NULL), insert_key_sequence_(3),
-      ordered_inserts_(true), record_count_(0) {
+      ordered_inserts_(true), record_count_(0), exact_key_size_(24) {
   }
   
   virtual ~CoreWorkload() {
@@ -207,6 +214,7 @@ class CoreWorkload {
   CounterGenerator insert_key_sequence_;
   bool ordered_inserts_;
   size_t record_count_;
+  size_t exact_key_size_;
 };
 
 inline std::string CoreWorkload::NextSequenceKey() {
@@ -226,9 +234,14 @@ inline std::string CoreWorkload::BuildKeyName(uint64_t key_num) {
   if (!ordered_inserts_) {
     key_num = utils::Hash(key_num);
   }
-  std::stringstream ss;
-  ss << "user" << std::setfill('0') << std::setw(20) << key_num;
-  return ss.str();
+  if (exact_key_size_ > 0)
+  {
+	std::stringstream ss;
+	ss << "user" << std::setfill('0') << std::setw(exact_key_size_ - 4) << key_num;
+	// take substring since setw pads short strings but doesn't truncate long ones
+	return ss.str().substr(0, exact_key_size_);
+  }
+  return std::string("user").append(std::to_string(key_num));
 }
 
 inline std::string CoreWorkload::NextFieldName() {
