@@ -31,7 +31,7 @@ enum Operation {
   OPS_NUM
 };
 
-const char* OperationName(Operation op)
+inline const char* OperationName(Operation op)
 {
 	switch (op)
 	{
@@ -226,8 +226,8 @@ inline std::string CoreWorkload::BuildKeyName(uint64_t key_num) {
   if (!ordered_inserts_) {
     key_num = utils::Hash(key_num);
   }
-  std::stringstream ss("user");
-  ss << std::setw(20) << key_num;
+  std::stringstream ss;
+  ss << "user" << std::setfill('0') << std::setw(20) << key_num;
   return ss.str();
 }
 
