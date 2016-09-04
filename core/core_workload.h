@@ -11,6 +11,8 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
+#include <iomanip>
 #include "db.h"
 #include "properties.h"
 #include "generator.h"
@@ -224,7 +226,9 @@ inline std::string CoreWorkload::BuildKeyName(uint64_t key_num) {
   if (!ordered_inserts_) {
     key_num = utils::Hash(key_num);
   }
-  return std::string("user").append(std::to_string(key_num));
+  std::stringstream ss("user");
+  ss << std::setw(20) << key_num;
+  return ss.str();
 }
 
 inline std::string CoreWorkload::NextFieldName() {
