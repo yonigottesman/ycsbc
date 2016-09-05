@@ -165,8 +165,9 @@ void CoreWorkload::Init(const utils::Properties &p) {
     throw utils::Exception("Distribution not allowed for scan length: " +
         scan_len_dist);
   }
-  exact_key_size_ = std::stoi(p.GetProperty(EXACT_KEY_SIZE,
-                                            EXACT_KEY_SIZE_DEFAULT));
+  string keySize = p.GetProperty(EXACT_KEY_SIZE, EXACT_KEY_SIZE_DEFAULT);
+  if (!keySize.empty())
+	  exact_key_size_ = std::stoi(keySize);
 }
 
 ycsbc::Generator<uint64_t> *CoreWorkload::GetFieldLenGenerator(
