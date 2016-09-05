@@ -166,7 +166,7 @@ void CoreWorkload::Init(const utils::Properties &p) {
         scan_len_dist);
   }
   exact_key_size_ = std::stoi(p.GetProperty(EXACT_KEY_SIZE,
-                                            INSERT_START_DEFAULT));
+                                            EXACT_KEY_SIZE_DEFAULT));
 }
 
 ycsbc::Generator<uint64_t> *CoreWorkload::GetFieldLenGenerator(
