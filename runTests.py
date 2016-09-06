@@ -107,8 +107,8 @@ initsNum = ['10000']
 opersNum =  ['1000000']
 threadsNum = ['1', '2', '4', '8', '16']
 #options = [''] # must have at least one option, possibly empty
-commonOps = '-initChunks 100'
-options = [commonOps + ' -workerThreadsNum 0', commonOps + ' -workerThreadsNum 1', commonOps + ' -workerThreadsNum 2', commonOps + ' -workerThreadsNum 4']
+commonOps = '-initChunks 100 -writeBufBytesCapacity 2048 '
+options = ['-workerThreadsNum 0', '-workerThreadsNum 1', '-workerThreadsNum 2', '-workerThreadsNum 4']
 
 # note: on the zipfian distribution, the range of values used to generate keys is initsNum + opersNum * rateOfInsert * 2
 # also, default value size is 100 chars (probably configurable via fieldlength, not sure)
@@ -120,6 +120,20 @@ for bench in benchmarks:
                 for threads in threadsNum:
                     opts = (['-initChunks 1'] if bench != 'piwi' else options)
                     for opt in opts:
+                        opt = commonOps + opt
+                        print('\tinits: ' + inits + ', operations: ' + opers + ', threads: ' + threads + ', ops: ' + opt)
+                        popenAndCall(bench, workload, inits, opers, threads, opt)
+
+commonOps = '-initChunks 100 -writeBufBytesCapacity 8192'
+for bench in benchmarks:
+    for workload in workloads:
+        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
+        for inits in initsNum:
+            for opers in opersNum:
+                for threads in threadsNum:
+                    opts = (['-initChunks 1'] if bench != 'piwi' else options)
+                    for opt in opts:
+                        opt = commonOps + opt
                         print('\tinits: ' + inits + ', operations: ' + opers + ', threads: ' + threads + ', ops: ' + opt)
                         popenAndCall(bench, workload, inits, opers, threads, opt)
 
