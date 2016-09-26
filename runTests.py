@@ -99,16 +99,18 @@ f = open(resultsFile, 'a')
 f.write('benchmark\tworkload\tinitNum\topersNum\tthreadsNum\trun_options\tops_per_sec\tputLat\tgetLat\n')
 f.close()
 
-#benchmarks = ['piwi', 'rocks']
-benchmarks = ['piwi']
+benchmarks = ['piwi', 'rocks']
+#benchmarks = ['piwi']
 #workloads = ['gets_from_keystore', 'gets_from_writebuf', 'puts_and_rebalance', 'puts_gets_rebalances']
-workloads = ['puts_gets_rebalances']
+workloads = ['puts_gets_rebalances', 'scans_only']
 initsNum = ['10000']
 opersNum =  ['1000000']
-threadsNum = ['1', '2', '4', '8', '16']
+#threadsNum = ['1', '2', '4', '8', '16']
+threadsNum = ['8']
 #options = [''] # must have at least one option, possibly empty
-commonOps = '-initChunks 100 -writeBufBytesCapacity 8192'
-options = ['-workerThreadsNum 0', '-workerThreadsNum 1', '-workerThreadsNum 2', '-workerThreadsNum 4']
+#commonOps = '-initChunks 100 -writeBufBytesCapacity 4096'
+commonOps = '-initChunks 100'
+options = ['-workerThreadsNum 2']
 
 # note: on the zipfian distribution, the range of values used to generate keys is initsNum + opersNum * rateOfInsert * 2
 # also, default value size is 100 chars (probably configurable via fieldlength, not sure)
