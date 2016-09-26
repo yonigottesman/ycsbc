@@ -14,6 +14,7 @@
 #include "core_workload.h"
 
 #include <string>
+#include <cmath>
 
 using ycsbc::CoreWorkload;
 using std::string;
@@ -145,7 +146,7 @@ void CoreWorkload::Init(const utils::Properties &p) {
     // If the generator picks a key that is not inserted yet, we just ignore it
     // and pick another key.
     int op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY));
-    int new_keys = (int)(op_count * insert_proportion * 2); // a fudge factor
+    int new_keys = std::max<size_t>(record_count_, op_count * insert_proportion) * 2; // a fudge factor
     key_chooser_ = new ScrambledZipfianGenerator(record_count_ + new_keys);
     
   } else if (request_dist == "latest") {
