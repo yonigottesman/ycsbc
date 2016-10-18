@@ -22,7 +22,7 @@ class Client
 public:
 	Client(DB &db, CoreWorkload &wl, size_t opsNum) :
 			db_(db), workload_(wl),
-			stats(OPS_NUM, Statistics(opsNum))
+			stats(OPS_NUM, Statistics(opsNum)), scanStats(opsNum)
 			// note: opsNum refer to all ops, while stats are gathered separately.
 			// depending on the mix, the actual number of events passed to a stats
 			// object can be much smaller than the declared.
@@ -39,6 +39,9 @@ public:
 	const Statistics& getStats(Operation op) const {
 		return stats[op];
 	}
+	const Statistics& getScanStats() const {
+		return scanStats;
+	}
 
 protected:
 
@@ -51,6 +54,7 @@ protected:
 	DB &db_;
 	CoreWorkload &workload_;
 	std::vector<Statistics> stats;
+	Statistics scanStats;
 	utils::Timer<double> timer; // ok since each client is used by a single thread
 };
 
@@ -129,13 +133,16 @@ inline int Client::TransactionScan() {
   const std::string &key = workload_.NextTransactionKey();
   int len = workload_.NextScanLength();
   std::vector<std::vector<DB::KVPair>> result;
+  int ret;
   if (!workload_.read_all_fields()) {
     std::vector<std::string> fields;
     fields.push_back("field" + workload_.NextFieldName());
-    return db_.Scan(table, key, len, &fields, result);
+    ret = db_.Scan(table, key, len, &fields, result);
   } else {
-    return db_.Scan(table, key, len, NULL, result);
+    ret = db_.Scan(table, key, len, NULL, result);
   }
+  scanStats.addEvent(result.size());
+  return ret;
 }
 
 inline int Client::TransactionUpdate() {

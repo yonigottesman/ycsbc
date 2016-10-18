@@ -11,6 +11,8 @@
 
 #include <vector>
 #include <string>
+#include <iomanip>
+#include <sstream>
 
 namespace ycsbc {
 
@@ -92,6 +94,19 @@ class DB {
   
   virtual ~DB() { }
 };
+
+inline std::string getScanTo(const std::string& from, size_t range)
+{
+	// generate the range end
+	size_t modDigits = 9; // 9 digits in int
+	const char* fromNum = from.c_str() + from.size() - modDigits;
+	size_t num = std::stoll(fromNum);
+	num += range;
+	std::stringstream ss;
+	ss << from.substr(0, from.size() - modDigits) << std::setfill('0') << std::setw(modDigits) << std::to_string(num);
+	std::string to = ss.str().substr(0, from.size());
+	return to;
+}
 
 } // ycsbc
 

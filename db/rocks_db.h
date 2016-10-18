@@ -61,10 +61,7 @@ public:
 	///
 	int Scan(const std::string &table, const std::string &key, int record_count,
 			const std::vector<std::string> *fields,
-			std::vector<std::vector<KVPair>> &result) override {
-		std::cerr << "PiwiDB::Scan not supported yet!" << std::endl;
-		return -1; // should cause an assert to fail
-	}
+			std::vector<std::vector<KVPair>> &result) override;
 
 	///
 	/// Updates a record in the database.

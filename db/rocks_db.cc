@@ -18,7 +18,7 @@ namespace ycsbc
 
 namespace
 {
-string kDBPath = "data_rocksdb";
+string kDBPath = "./data_rocksdb";
 }
 
 RocksDB::RocksDB()
@@ -35,7 +35,11 @@ RocksDB::RocksDB()
 
 	// open DB
 	rocksdb::Status s = rocksdb::DB::Open(options, kDBPath, &db);
-	assert(s.ok());
+	if (!s.ok())
+	{
+		cerr << "RocksDB DB could not be opened: " << s.ToString() << endl;
+		assert(false);
+	}
 }
 
 RocksDB::~RocksDB()
@@ -63,5 +67,31 @@ int RocksDB::Read(const string &table, const string &key,
 	result.push_back(KVPair("", value));
 	return DB::kOK;
 }
+
+int RocksDB::Scan(const string &table, const string &key, int record_count,
+		const vector<string> *fields,
+		vector<vector<KVPair>>& result)
+{
+	result.reserve(record_count);
+	rocksdb::ReadOptions readOps;
+	readOps.snapshot = db->GetSnapshot();
+	rocksdb::Iterator* iter = db->NewIterator(readOps);
+	rocksdb::Slice start(key);
+	string end = getScanTo(key, record_count);
+
+	for (iter->Seek(start); iter->Valid(); iter->Next())
+	{
+		string key(iter->key().ToString());
+		string val(iter->value().ToString());
+		if (key > end)
+			break;
+		result.emplace_back(vector<KVPair>{KVPair{key, val}});
+		if (result.size() == (size_t)record_count)
+			break;
+	}
+	delete iter;
+	return DB::kOK;
+}
+
 
 } /* namespace ycsbc */

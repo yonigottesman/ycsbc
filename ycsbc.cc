@@ -60,6 +60,21 @@ string buildReport(const ycsbc::Client& client)
 				ss << t << ", ";
 			ss << "\n";
 		}
+		if (i == ycsbc::SCAN)
+		{
+			double totalScanMean;
+			vector<double> partScanMeans;
+			const ycsbc::Statistics& scanStats = client.getScanStats();
+			scanStats.getMeans(totalScanMean, partScanMeans);
+			if (isnormal(totalScanMean))
+			{
+				ss << "Mean scan results: " << totalScanMean
+						<< "\nPartial scan results means: ";
+				for (double t : partScanMeans)
+					ss << t << ", ";
+				ss << "\n";
+			}
+		}
 	}
 	return ss.str();
 }
