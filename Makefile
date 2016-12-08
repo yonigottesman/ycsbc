@@ -1,5 +1,5 @@
 CC         = g++
-OPT        = -O0
+OPT        = -O3 -DNDEBUG
 CFLAGS     = -std=c++11 -g $(OPT) -Wall -pthread -I./ -isystem ../cds-2.1.0 -fopenmp
 #LDFLAGS    = -lpthread -ltbb -lhiredis
 LIBPIWI    = -Wl,-rpath,'../piwi' -L../piwi -lpiwi
@@ -8,7 +8,7 @@ ROCKSDB_SO = librocksdb.so
 LIBROCKS   = -Wl,-rpath,'../rocksdb' -L../rocksdb -l:$(ROCKSDB_SO)
 #LIBROCKS   = ../rocksdb/librocksdb.a ../rocksdb/libbz2.a ../rocksdb/libz.a ../rocksdb/libsnappy.a 
 #LDFLAGS   = -Wl,-rpath,'../rocksdb' -Wl,-rpath-link,../rocksdb -lpthread -ltbb -L../libcds/bin -lcds-s $(LIBPIWI) $(LIBROCKS)
-LDFLAGS    = -lpthread -ltbb -Wl,-rpath,'../libcds/bin' -L../libcds/bin -lcds $(LIBPIWI) $(LIBROCKS)
+LDFLAGS    = -lpthread -ltbb -Wl,-rpath,'../cds-2.1.0/bin' -L../cds-2.1.0/bin -lcds $(LIBPIWI) $(LIBROCKS)
 #LDFLAGS    = -lpthread -ltbb —L./redis/hiredis -lhiredis
 #SUBDIRS    = core db redis
 SUBDIRS    = core db

@@ -1,5 +1,6 @@
 CC=g++
-CFLAGS=-std=c++11 -c -g -Wall
+OPT=-O3 -DNDEBUG
+CFLAGS=$(OPT) -std=c++11 -c -g -Wall
 SOURCES=$(wildcard *.cc)
 OBJECTS=$(SOURCES:.cc=.o)
 
