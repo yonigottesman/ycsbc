@@ -18,10 +18,30 @@ namespace ycsbc
 
 namespace
 {
-string kDBPath = "./data_rocksdb";
+string DBPath = "data_rocksdb";
+
+const string UseFsync = "rocksdb_usefsync";
+const string SyncWrites = "rocksdb_syncwrites";
+
+bool useFsync(const map<string, string>& props)
+{
+    auto iter = props.find(UseFsync);
+    if (iter == props.end())
+        return false;
+    return settingToBool(iter->second);
 }
 
-RocksDB::RocksDB()
+bool syncWrites(const map<string, string>& props)
+{
+    auto iter = props.find(SyncWrites);
+    if (iter == props.end())
+        return false;
+    return settingToBool(iter->second);
+}
+
+} // namespace
+
+RocksDB::RocksDB(const map<string, string>& props, const string& dbDir)
 {
 	rocksdb::Options options;
 	// Optimize RocksDB. This is the easiest way to get RocksDB to perform well
@@ -33,8 +53,11 @@ RocksDB::RocksDB()
 	// create the DB if it's not already present
 	options.create_if_missing = true;
 
+	options.use_fsync = useFsync(props);
+	wo.sync = syncWrites(props);
+
 	// open DB
-	rocksdb::Status s = rocksdb::DB::Open(options, kDBPath, &db);
+	rocksdb::Status s = rocksdb::DB::Open(options, dbDir + DBPath, &db);
 	if (!s.ok())
 	{
 		cerr << "RocksDB DB could not be opened: " << s.ToString() << endl;
@@ -51,7 +74,7 @@ int RocksDB::Insert(const string &table, const string &key,
 		vector<KVPair> &values)
 {
 	// Put key-value
-	rocksdb::Status s = db->Put(rocksdb::WriteOptions(), key, values[0].second);
+	rocksdb::Status s = db->Put(wo, key, values[0].second);
 	if (!s.ok())
 		return DB::kErrorConflict;
 	return DB::kOK;
@@ -61,7 +84,7 @@ int RocksDB::Read(const string &table, const string &key,
 		const vector<string> *fields, vector<KVPair> &result)
 {
 	string value;
-	rocksdb::Status s = db->Get(rocksdb::ReadOptions(), key, &value);
+	rocksdb::Status s = db->Get(ro, key, &value);
 	if (!s.ok())
 		return DB::kErrorNoData;
 	result.push_back(KVPair("", value));
@@ -74,7 +97,8 @@ int RocksDB::Scan(const string &table, const string &key, int record_count,
 {
 	result.reserve(record_count);
 	rocksdb::ReadOptions readOps;
-	readOps.snapshot = db->GetSnapshot();
+	rocksdb::ManagedSnapshot raiiSnap(db);
+	readOps.snapshot = raiiSnap.snapshot();
 	rocksdb::Iterator* iter = db->NewIterator(readOps);
 	rocksdb::Slice start(key);
 	string end = getScanTo(key, record_count);

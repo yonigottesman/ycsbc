@@ -228,6 +228,12 @@ void UsageMessage(const char *command) {
   cout << "                   be specified, and will be processed in the order specified" << endl;
   cout << "  -<custom name> val: add a custom property" << endl;
   cout << "Note: the order of the arguments with respect to the properties file matters!" << endl;
+  cout << "\nSome custom options:" << endl;
+  cout << "  -dbdir: root directory of db files (default: .)" << endl;
+  cout << "  -keyrange: range of generated keys (default: depending on distribution)" << endl;
+  cout << "RocksDB" << endl;
+  cout << "  -rocksdb_usefsync: synchronize file metadata on every sync (default: false)" << endl;
+  cout << "  -rocksdb_syncwrites: disable OS buffering and synchronize every file write (default: false)" << endl;
 }
 
 inline bool StrStartWith(const char *str, const char *pre) {

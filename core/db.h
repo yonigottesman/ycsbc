@@ -108,6 +108,11 @@ inline std::string getScanTo(const std::string& from, size_t range)
 	return to;
 }
 
+inline bool settingToBool(const std::string& val)
+{
+    return val == "true" || val == "yes" || val == "1";
+}
+
 } // ycsbc
 
 #endif // YCSB_C_DB_H_

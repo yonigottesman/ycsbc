@@ -73,6 +73,8 @@ const string CoreWorkload::INSERT_START_DEFAULT = "0";
 
 const string CoreWorkload::RECORD_COUNT_PROPERTY = "recordcount";
 const string CoreWorkload::OPERATION_COUNT_PROPERTY = "operationcount";
+const string CoreWorkload::KEY_RANGE_PROPERTY = "keyrange";
+const string CoreWorkload::KEY_RANGE_DEFAULT = "0";
 
 const string CoreWorkload::EXACT_KEY_SIZE = "exact_key_size";
 const string CoreWorkload::EXACT_KEY_SIZE_DEFAULT = "24";
@@ -96,6 +98,8 @@ void CoreWorkload::Init(const utils::Properties &p) {
       READMODIFYWRITE_PROPORTION_PROPERTY, READMODIFYWRITE_PROPORTION_DEFAULT));
   
   record_count_ = std::stoi(p.GetProperty(RECORD_COUNT_PROPERTY));
+  key_range_ = std::stoi(p.GetProperty(KEY_RANGE_PROPERTY,
+                                       KEY_RANGE_DEFAULT));
   std::string request_dist = p.GetProperty(REQUEST_DISTRIBUTION_PROPERTY,
                                            REQUEST_DISTRIBUTION_DEFAULT);
   int max_scan_len = std::stoi(p.GetProperty(MAX_SCAN_LENGTH_PROPERTY,
@@ -134,10 +138,12 @@ void CoreWorkload::Init(const utils::Properties &p) {
     op_chooser_.AddValue(READMODIFYWRITE, readmodifywrite_proportion);
   }
   
-  insert_key_sequence_.Set(record_count_);
+  insert_key_sequence_.Set(record_count_); // is needed for anyone but "latest"?
   
   if (request_dist == "uniform") {
-    key_chooser_ = new UniformGenerator(0, record_count_ - 1);
+    if (key_range_ == 0)
+        key_range_ = record_count_ - 1;
+    key_chooser_ = new UniformGenerator(0, key_range_);
     
   } else if (request_dist == "zipfian") {
     // If the number of keys changes, we don't want to change popular keys.
@@ -146,10 +152,14 @@ void CoreWorkload::Init(const utils::Properties &p) {
     // If the generator picks a key that is not inserted yet, we just ignore it
     // and pick another key.
     int op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY));
-    int new_keys = std::max<size_t>(record_count_, op_count * insert_proportion) * 2; // a fudge factor
-    key_chooser_ = new ScrambledZipfianGenerator(new_keys);
+    if (key_range_ == 0)
+        key_range_ = std::max<size_t>(record_count_, op_count * insert_proportion) * 2; // a fudge factor
+    key_chooser_ = new ScrambledZipfianGenerator(key_range_);
     
   } else if (request_dist == "latest") {
+    if (key_range_ == 0)
+        key_range_ = record_count_;
+    insert_key_sequence_.Set(key_range_);
     key_chooser_ = new SkewedLatestGenerator(insert_key_sequence_);
     
   } else {

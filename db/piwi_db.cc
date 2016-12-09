@@ -18,9 +18,14 @@ using namespace std;
 namespace ycsbc
 {
 
-PiwiDB::PiwiDB(const map<string, string>& props)
+PiwiDB::PiwiDB(const map<string, string>& props, const string& dbDir)
 {
-	piwi::init(props);
+    map<string, string> propsWdir(props);
+    string subDir = propsWdir["dataDir"];
+    if (subDir.empty())
+        subDir = "data_piwi";
+    propsWdir["dataDir"] = dbDir + subDir;
+	piwi::init(propsWdir);
 }
 
 PiwiDB::~PiwiDB()

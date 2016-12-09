@@ -155,6 +155,8 @@ class CoreWorkload {
   
   static const std::string RECORD_COUNT_PROPERTY;
   static const std::string OPERATION_COUNT_PROPERTY;
+  static const std::string KEY_RANGE_PROPERTY;
+  static const std::string KEY_RANGE_DEFAULT;
 
   ///
   /// The exact size of key.
@@ -186,7 +188,7 @@ class CoreWorkload {
       field_count_(0), read_all_fields_(false), write_all_fields_(false),
       field_len_generator_(NULL), key_generator_(NULL), key_chooser_(NULL),
       field_chooser_(NULL), scan_len_chooser_(NULL), insert_key_sequence_(3),
-      ordered_inserts_(true), record_count_(0), exact_key_size_(24) {
+      ordered_inserts_(true), record_count_(0), key_range_(0), exact_key_size_(24) {
   }
   
   virtual ~CoreWorkload() {
@@ -214,6 +216,7 @@ class CoreWorkload {
   CounterGenerator insert_key_sequence_;
   bool ordered_inserts_;
   size_t record_count_;
+  size_t key_range_;
   size_t exact_key_size_;
 };
 

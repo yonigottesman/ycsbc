@@ -20,8 +20,10 @@ namespace ycsbc
 class RocksDB: public DB
 {
 	rocksdb::DB* db;
+	rocksdb::WriteOptions wo;
+	rocksdb::ReadOptions ro;
 public:
-	RocksDB();
+	RocksDB(const std::map<std::string, std::string>& props, const std::string& dbDir);
 	~RocksDB();
 	///
 	/// Initializes any state for accessing this DB.

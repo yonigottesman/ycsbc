@@ -20,7 +20,7 @@ namespace ycsbc
 class PiwiDB : public DB
 {
 public:
-	PiwiDB(const std::map<std::string, std::string>& props);
+	PiwiDB(const std::map<std::string, std::string>& props, const std::string& dbDir);
 	~PiwiDB();
 	///
 	/// Initializes any state for accessing this DB.

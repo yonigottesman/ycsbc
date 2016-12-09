@@ -22,6 +22,20 @@ using namespace std;
 namespace ycsbc
 {
 
+namespace
+{
+string getDbDir(const map<string, string>& props)
+{
+    auto iter = props.find("dbdir");
+    string dir = iter == props.end() ? "./" : iter->second;
+    if (dir.empty())
+        dir = "./";
+    if (*dir.rbegin() != '/')
+        dir += '/';
+    return dir;
+}
+}
+
 DB* DBFactory::CreateDB(utils::Properties &props) {
   if (props["dbname"] == "basic") {
     return new BasicDB;
@@ -34,9 +48,9 @@ DB* DBFactory::CreateDB(utils::Properties &props) {
   } else if (props["dbname"] == "piwi_test") {
     return new PiwiTestDB;
   } else if (props["dbname"] == "piwi") {
-    return new PiwiDB(props.properties());
+    return new PiwiDB(props.properties(), getDbDir(props.properties()));
   } else if (props["dbname"] == "rocks") {
-    return new RocksDB;
+    return new RocksDB(props.properties(), getDbDir(props.properties()));
   } else return NULL;
 }
 
