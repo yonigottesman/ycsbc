@@ -16,6 +16,7 @@
 #include "db/piwitest_db.h"
 #include "db/piwi_db.h"
 #include "db/rocks_db.h"
+#include "db/multi_rocks_db.h"
 
 using namespace std;
 
@@ -51,6 +52,8 @@ DB* DBFactory::CreateDB(utils::Properties &props) {
     return new PiwiDB(props.properties(), getDbDir(props.properties()));
   } else if (props["dbname"] == "rocks") {
     return new RocksDB(props.properties(), getDbDir(props.properties()));
+  } else if (props["dbname"] == "multi_rocks") {
+    return new MultiRocksDB(props.properties(), getDbDir(props.properties()));
   } else return NULL;
 }
 

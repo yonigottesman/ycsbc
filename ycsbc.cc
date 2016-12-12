@@ -111,6 +111,8 @@ int main(const int argc, const char *argv[]) {
     cout << "Unknown database name " << props["dbname"] << endl;
     exit(0);
   }
+  else
+    cout << "Using DB client of type " << typeid(*db).name() << endl;
 
   ycsbc::CoreWorkload wl;
   wl.Init(props);
@@ -234,6 +236,7 @@ void UsageMessage(const char *command) {
   cout << "RocksDB" << endl;
   cout << "  -rocksdb_usefsync: synchronize file metadata on every sync (default: false)" << endl;
   cout << "  -rocksdb_syncwrites: disable OS buffering and synchronize every file write (default: false)" << endl;
+  cout << "  -rocksdb_shards: the number of RocksDB instances to use (default: 1)" << endl;
 }
 
 inline bool StrStartWith(const char *str, const char *pre) {

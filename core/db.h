@@ -13,6 +13,7 @@
 #include <string>
 #include <iomanip>
 #include <sstream>
+#include <sys/stat.h>
 
 namespace ycsbc {
 
@@ -111,6 +112,13 @@ inline std::string getScanTo(const std::string& from, size_t range)
 inline bool settingToBool(const std::string& val)
 {
     return val == "true" || val == "yes" || val == "1";
+}
+
+inline void verifyDirExists(const std::string& dir)
+{
+    int status = mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    if (status != 0 && errno != EEXIST)
+        perror(("Could not create folder " + dir).c_str());
 }
 
 } // ycsbc

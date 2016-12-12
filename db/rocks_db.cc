@@ -57,6 +57,7 @@ RocksDB::RocksDB(const map<string, string>& props, const string& dbDir)
 	wo.sync = syncWrites(props);
 
 	// open DB
+	verifyDirExists(dbDir + DBPath);
 	rocksdb::Status s = rocksdb::DB::Open(options, dbDir + DBPath, &db);
 	if (!s.ok())
 	{
