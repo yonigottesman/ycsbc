@@ -62,5 +62,10 @@ int PiwiDB::Scan(const string &table, const string &from, int record_count,
 	return DB::kOK;
 }
 
+int PiwiDB::Update(const string &table, const string &key,
+            vector<KVPair> &values)
+{
+    return Insert(table, key, values);
+}
 
 } /* namespace ycsbc */

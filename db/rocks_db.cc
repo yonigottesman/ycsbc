@@ -118,5 +118,11 @@ int RocksDB::Scan(const string &table, const string &key, int record_count,
 	return DB::kOK;
 }
 
+int RocksDB::Update(const string &table, const string &key,
+        vector<KVPair> &values)
+{
+    return Insert(table, key, values);
+}
+
 
 } /* namespace ycsbc */

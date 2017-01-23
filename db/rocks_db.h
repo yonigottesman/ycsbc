@@ -17,7 +17,7 @@
 namespace ycsbc
 {
 
-class RocksDB: public DB
+class RocksDB : public DB
 {
 	rocksdb::DB* db;
 	rocksdb::WriteOptions wo;
@@ -76,10 +76,7 @@ public:
 	/// @return Zero on success, a non-zero error code on error.
 	///
 	int Update(const std::string &table, const std::string &key,
-			std::vector<KVPair> &values) override {
-		std::cerr << "PiwiDB::Update not supported yet!" << std::endl;
-		return -1; // should cause an assert to fail
-	}
+			std::vector<KVPair> &values) override;
 
 	///
 	/// Inserts a record into the database.
@@ -100,7 +97,7 @@ public:
 	/// @return Zero on success, a non-zero error code on error.
 	///
 	int Delete(const std::string &table, const std::string &key) override {
-		std::cerr << "PiwiDB::Delete not supported yet!" << std::endl;
+		std::cerr << "RocksDB::Delete not supported yet!" << std::endl;
 		return -1; // should cause an assert to fail
 	}
 };

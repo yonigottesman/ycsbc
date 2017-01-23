@@ -1,22 +1,29 @@
-CC         = g++
+CXX        = g++
 OPT        = -O3 -DNDEBUG
-CFLAGS     = -std=c++11 -g $(OPT) -Wall -pthread -I./ -isystem ../cds-2.1.0 -fopenmp
+CXXFLAGS   = -std=c++11 -g $(OPT) -Wall -pthread -I./ -isystem ../cds-2.1.0 -fopenmp
 #LDFLAGS    = -lpthread -ltbb -lhiredis
 LIBPIWI    = -Wl,-rpath,'../piwi' -L../piwi
 LIBCDS     = -Wl,-rpath,'../libcds/bin' -L../libcds/bin
+ROCKSDB_SO = librocksdb.so
+
 ifeq ($(findstring O0, $(OPT)), O0)
 	LIBPIWI += -lpiwi_d
 	LIBCDS  += -lcds_d
+	ROCKSDB_SO = librocksdb_debug.so
+	CXXFLAGS += -fsanitize=undefined -fbounds-check
+#	CXXFLAGS += -fno-sanitize-recover
+#	CXXFLAGS += -D_GLIBCXX_DEBUG
+	ASAN_LIB = -lasan
 else
 	LIBPIWI += -lpiwi
 	LIBCDS  += -lcds
 endif
 #LIBPIWI   = ../piwi/piwi.a
-ROCKSDB_SO = librocksdb.so
-LIBROCKS   = -Wl,-rpath,'../rocksdb' -L../rocksdb -l:$(ROCKSDB_SO)
+ROCKS_ROOT = ../rocksdb5
+LIBROCKS   = -Wl,-rpath,'$(ROCKS_ROOT)' -L$(ROCKS_ROOT) -l:$(ROCKSDB_SO)
 #LIBROCKS   = ../rocksdb/librocksdb.a ../rocksdb/libbz2.a ../rocksdb/libz.a ../rocksdb/libsnappy.a 
 #LDFLAGS   = -Wl,-rpath,'../rocksdb' -Wl,-rpath-link,../rocksdb -lpthread -ltbb -L../libcds/bin -lcds-s $(LIBPIWI) $(LIBROCKS)
-LDFLAGS    = -lpthread -ltbb $(LIBCDS) $(LIBPIWI) $(LIBROCKS)
+LDFLAGS    = $(ASAN_LIB) -lpthread -ltbb $(LIBCDS) $(LIBPIWI) $(LIBROCKS)
 #LDFLAGS    = -lpthread -ltbb —L./redis/hiredis -lhiredis
 #SUBDIRS    = core db redis
 SUBDIRS    = core db
@@ -43,7 +50,7 @@ $(SUBDIRS):
 	$(MAKE) -C $@
 
 $(EXEC): $(wildcard *.cc) $(OBJECTS)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 
 clean:
 	for dir in $(SUBDIRS); do \

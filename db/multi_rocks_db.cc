@@ -152,5 +152,10 @@ int MultiRocksDB::Scan(const string &table, const string &key, int record_count,
 	return kOK;
 }
 
+int MultiRocksDB::Update(const std::string &table, const std::string &key,
+            std::vector<KVPair> &values)
+{
+    return Insert(table, key, values);
+}
 
 } /* namespace ycsbc */

@@ -85,10 +85,7 @@ public:
 	/// @return Zero on success, a non-zero error code on error.
 	///
 	int Update(const std::string &table, const std::string &key,
-			std::vector<KVPair> &values) override {
-		std::cerr << "PiwiDB::Update not supported yet!" << std::endl;
-		return -1; // should cause an assert to fail
-	}
+			std::vector<KVPair> &values) override;
 	///
 	/// Deletes a record from the database.
 	///

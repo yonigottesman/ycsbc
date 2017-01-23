@@ -1,13 +1,19 @@
-CC=g++
+CXX=g++
 OPT=-O3 -DNDEBUG
-CFLAGS=$(OPT) -std=c++11 -c -g -Wall
+CXXFLAGS=$(OPT) -std=c++11 -c -g -Wall
 SOURCES=$(wildcard *.cc)
 OBJECTS=$(SOURCES:.cc=.o)
+
+ifeq ($(findstring O0, $(OPT)), O0)
+	CXXFLAGS += -fsanitize=undefined -fbounds-check
+#	CXXFLAGS += -fno-sanitize-recover
+#	CXXFLAGS += -D_GLIBCXX_DEBUG
+endif
 
 all: $(SOURCES) $(OBJECTS)
 
 .cc.o:
-	$(CC) $(CFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $< -o $@
 
 clean:
 	$(RM) $(OBJECTS)
