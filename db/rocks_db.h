@@ -10,7 +10,7 @@
 
 #include "core/db.h"
 
-#include "rocksdb/db.h"
+#include <rocksdb/db.h>
 
 #include <iostream>
 

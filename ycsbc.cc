@@ -6,12 +6,15 @@
 //  Copyright (c) 2014 Jinglei Ren <jinglei@ren.systems>.
 //
 
+#include <core/sys_stats.h>
 #include <cstring>
 #include <string>
 #include <iostream>
 #include <sstream>
 #include <vector>
 #include <future>
+#include <algorithm>
+#include <iomanip>
 #include <omp.h>
 #include "core/utils.h"
 #include "core/timer.h"
@@ -41,7 +44,37 @@ int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const int num_ops,
   return oks;
 }
 
-string buildReport(const ycsbc::Client& client)
+string buildHistogram(const vector<double>& partMeans)
+{
+    if (partMeans.empty())
+        return "";
+    auto minmax = minmax_element(partMeans.begin(), partMeans.end());
+    double minVal = *minmax.first;
+    double maxVal = *minmax.second;
+    constexpr size_t BucketsNum = 10, Scale = 1;
+    double bucketSize = (maxVal - minVal) / BucketsNum;
+    array<size_t, BucketsNum> histogram{};
+    for (double m : partMeans)
+    {
+        size_t bucket = (m - minVal) / bucketSize;
+        if (bucket == BucketsNum)
+            --bucket;
+        ++histogram[bucket];
+    }
+    size_t maxHeight = (100 * *max_element(histogram.begin(), histogram.end())) / partMeans.size() / Scale;
+    stringstream ss;
+    ss << "Histogram: " << fixed << endl;
+    for (size_t b = 0; b < BucketsNum; ++b)
+    {
+        size_t n = (histogram[b] * 100) / partMeans.size();
+        size_t h = n / Scale;
+        ss << setw(4) << setfill(' ') << setprecision(2) << (minVal + bucketSize * b) << ": " << setfill(']') <<
+                setw(h) << "] " << setfill(' ') << setw(maxHeight - h + 2) << " (" << n << "%)" << endl;
+    }
+    return ss.str();
+}
+
+string buildOpsReport(const ycsbc::Client& client)
 {
 	stringstream ss;
 	ss << "Main thread statistics:\n";
@@ -56,8 +89,9 @@ string buildReport(const ycsbc::Client& client)
 			string opName = ycsbc::OperationName((ycsbc::Operation)i);
 			ss << "Mean " << opName << " time (ms): " << totalMean
 					<< "\nPartial " << opName << " means: ";
+			ss << fixed;
 			for (double t : partMeans)
-				ss << t << ", ";
+				ss << setprecision(2) << t << ", ";
 			ss << "\n";
 		}
 		if (i == ycsbc::SCAN)
@@ -75,15 +109,37 @@ string buildReport(const ycsbc::Client& client)
 				ss << "\n";
 			}
 		}
+		ss << buildHistogram(partMeans);
 	}
 	return ss.str();
+}
+
+string buildIoReport(size_t bytesRead, size_t bytesWritten, const ycsbc::SysStats& beginStats)
+{
+    stringstream ss;
+    ycsbc::SysStats stats = ycsbc::getSysStats();
+    stats -= beginStats;
+    ss << "key+value bytes sent to DB: " << bytesWritten << ", write amplifications -" <<
+            "\n\tvs. bytes sent to kernel:   " << (double)stats.sentWriteBytes / bytesWritten <<
+            "\n\tvs. bytes written to disk:  " << (double)stats.diskBytesWritten / bytesWritten <<
+            "\nvalue bytes received from DB: " << bytesRead << ", read amplifications -" <<
+            "\n\tvs. bytes sent from kernel: " << (double)stats.sentReadBytes / bytesRead <<
+            "\n\tvs. bytes read from disk:   " << (double)stats.diskBytesRead / bytesRead <<
+            "\ntotal read system calls:  " << stats.callsToRead <<
+            "\ntotal write system calls: " << stats.callsToWrite <<
+            "\ntotal user time (sec):    " << stats.userTime <<
+            "\ntotal system time (sec):  " << stats.sysTime <<
+            endl;
+    return ss.str();
 }
 
 size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoading,
 		ycsbc::DB* db, ycsbc::CoreWorkload& wl, string& report)
 {
-	size_t oks = 0;
-#pragma omp parallel shared(db, wl, report) num_threads(threadsNum) reduction(+: oks)
+	size_t oks = 0, bytesRead = 0, bytesWritten = 0;
+	ycsbc::SysStats beginStats = ycsbc::getSysStats();
+#pragma omp parallel shared(db, wl, report) num_threads(threadsNum) \
+	reduction(+: oks) reduction(+: bytesRead) reduction(+: bytesWritten)
 	{
 		db->Init(); // per-thread initialization
 		ycsbc::Client client(*db, wl, threadOps);
@@ -97,8 +153,11 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
 		}
 		db->Close(); // per-thread cleanup
 		if (!isLoading && omp_get_thread_num() == 0)
-			report = buildReport(client);
+			report = buildOpsReport(client);
+        bytesRead = client.getBytesRead();
+        bytesWritten = client.getBytesWritten();
 	}
+	report += buildIoReport(bytesRead, bytesWritten, beginStats);
 	return oks;
 }
 

@@ -42,6 +42,12 @@ public:
 	const Statistics& getScanStats() const {
 		return scanStats;
 	}
+    size_t getBytesRead() const {
+        return bytesRead;
+    }
+    size_t getBytesWritten() const {
+        return bytesWritten;
+    }
 
 protected:
 
@@ -55,6 +61,7 @@ protected:
 	CoreWorkload &workload_;
 	std::vector<Statistics> stats;
 	Statistics scanStats;
+	size_t bytesRead = 0, bytesWritten = 0;
 	utils::Timer<double> timer; // ok since each client is used by a single thread
 };
 
@@ -62,6 +69,7 @@ inline bool Client::DoInsert() {
   std::string key = workload_.NextSequenceKey();
   std::vector<DB::KVPair> pairs;
   workload_.BuildValues(pairs);
+  bytesWritten += key.size() + pairs[0].second.size();
   return (db_.Insert(workload_.NextTable(), key, pairs) == DB::kOK);
 }
 
@@ -97,13 +105,15 @@ inline int Client::TransactionRead() {
   const std::string &table = workload_.NextTable();
   const std::string &key = workload_.NextTransactionKey();
   std::vector<DB::KVPair> result;
+  std::vector<std::string> fields, *readFields = nullptr;
   if (!workload_.read_all_fields()) {
-    std::vector<std::string> fields;
     fields.push_back("field" + workload_.NextFieldName());
-    return db_.Read(table, key, &fields, result);
-  } else {
-    return db_.Read(table, key, NULL, result);
+    readFields = &fields;
   }
+  int ret = db_.Read(table, key, readFields, result);
+  if (!result.empty())
+      bytesRead += result[0].second.size();
+  return ret;
 }
 
 inline int Client::TransactionReadModifyWrite() {
@@ -142,6 +152,8 @@ inline int Client::TransactionScan() {
     ret = db_.Scan(table, key, len, NULL, result);
   }
   scanStats.addEvent(result.size());
+  for (const auto& vec : result)
+      bytesRead += vec[0].second.size();
   return ret;
 }
 
@@ -154,6 +166,7 @@ inline int Client::TransactionUpdate() {
   } else {
     workload_.BuildUpdate(values);
   }
+  bytesWritten += key.size() + values[0].second.size();
   return db_.Update(table, key, values);
 }
 
@@ -162,6 +175,7 @@ inline int Client::TransactionInsert() {
   const std::string &key = workload_.NextSequenceKey();
   std::vector<DB::KVPair> values;
   workload_.BuildValues(values);
+  bytesWritten += key.size() + values[0].second.size();
   return db_.Insert(table, key, values);
 } 
 
