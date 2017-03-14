@@ -66,7 +66,7 @@ string buildHistogram(const vector<double>& partMeans)
     ss << "Histogram: " << fixed << endl;
     for (size_t b = 0; b < BucketsNum; ++b)
     {
-        size_t n = (histogram[b] * 100) / partMeans.size();
+        double n = (100.0 * histogram[b]) / partMeans.size();
         size_t h = n / Scale;
         ss << setw(4) << setfill(' ') << setprecision(2) << (minVal + bucketSize * b) << ": " << setfill(']') <<
                 setw(h) << "] " << setfill(' ') << setw(maxHeight - h + 2) << " (" << n << "%)" << endl;
