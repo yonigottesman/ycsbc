@@ -17,9 +17,15 @@ namespace ycsbc
 
 class StatsDb : public DB
 {
-    utils::Properties props;
     std::map<std::string, size_t> keyCounters;
+    const size_t givenMunkKeys = 0;
+    const size_t munkBytesCapacity = 0;
+    const size_t valSize = 0;
+
     void printStats(size_t chunkSize);
+    void calcMunkKeys(const std::map<std::string, std::string>& props,
+            size_t& munkKeys, size_t& munkBytesCapacity, size_t& valSize);
+
 public:
     StatsDb(const std::map<std::string, std::string>& props);
     ~StatsDb();
