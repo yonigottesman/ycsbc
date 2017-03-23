@@ -87,12 +87,12 @@ string buildOpsReport(const ycsbc::Client& client)
 		if (isnormal(totalMean))
 		{
 			string opName = ycsbc::OperationName((ycsbc::Operation)i);
-			ss << "Mean " << opName << " time (ms): " << totalMean
-					<< "\nPartial " << opName << " means: ";
-			ss << fixed;
-			for (double t : partMeans)
-				ss << setprecision(2) << t << ", ";
-			ss << "\n";
+			ss << "Mean " << opName << " time (ms): " << totalMean << endl;
+//			ss << "Partial " << opName << " means: ";
+//			ss << fixed;
+//			for (double t : partMeans)
+//				ss << setprecision(2) << t << ", ";
+//			ss << "\n";
 		}
 		if (i == ycsbc::SCAN)
 		{
@@ -102,11 +102,11 @@ string buildOpsReport(const ycsbc::Client& client)
 			scanStats.getMeans(totalScanMean, partScanMeans);
 			if (isnormal(totalScanMean))
 			{
-				ss << "Mean scan results: " << totalScanMean
-						<< "\nPartial scan results means: ";
-				for (double t : partScanMeans)
-					ss << t << ", ";
-				ss << "\n";
+				ss << "Mean scan results: " << totalScanMean << endl;
+//				ss << "Partial scan results means: ";
+//				for (double t : partScanMeans)
+//					ss << t << ", ";
+//				ss << "\n";
 			}
 		}
 		ss << buildHistogram(partMeans);

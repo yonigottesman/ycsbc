@@ -11,12 +11,10 @@
 #include <string>
 #include "db/basic_db.h"
 #include "db/lock_stl_db.h"
-#include "db/tbb_rand_db.h"
-#include "db/tbb_scan_db.h"
-#include "db/piwitest_db.h"
 #include "db/piwi_db.h"
 #include "db/rocks_db.h"
 #include "db/multi_rocks_db.h"
+#include "db/stats_db.h"
 
 using namespace std;
 
@@ -42,18 +40,14 @@ DB* DBFactory::CreateDB(utils::Properties &props) {
     return new BasicDB;
   } else if (props["dbname"] == "lock_stl") {
     return new LockStlDB;
-//  } else if (props["dbname"] == "tbb_rand") {
-//    return new TbbRandDB;
-//  } else if (props["dbname"] == "tbb_scan") {
-//    return new TbbScanDB;
-  } else if (props["dbname"] == "piwi_test") {
-    return new PiwiTestDB;
   } else if (props["dbname"] == "piwi") {
     return new PiwiDB(props.properties(), getDbDir(props.properties()));
   } else if (props["dbname"] == "rocks") {
     return new RocksDB(props.properties(), getDbDir(props.properties()));
   } else if (props["dbname"] == "multi_rocks") {
     return new MultiRocksDB(props.properties(), getDbDir(props.properties()));
+  } else if (props["dbname"] == "stats") {
+    return new StatsDb(props.properties());
   } else return NULL;
 }
 
