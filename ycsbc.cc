@@ -15,6 +15,8 @@
 #include <future>
 #include <algorithm>
 #include <iomanip>
+#include <exception>
+#include <stdexcept>
 #include <omp.h>
 #include "core/utils.h"
 #include "core/timer.h"
@@ -134,25 +136,43 @@ string buildIoReport(size_t bytesRead, size_t bytesWritten, const ycsbc::SysStat
 }
 
 size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoading,
-		ycsbc::DB* db, ycsbc::CoreWorkload& wl, string& report)
+		ycsbc::DB* db, ycsbc::CoreWorkload& wl, string& report,
+		exception_ptr& exceptionThrown)
 {
 	size_t oks = 0, bytesRead = 0, bytesWritten = 0;
+	const size_t reportRange = threadOps / 10;
 	ycsbc::SysStats beginStats = ycsbc::getSysStats();
-#pragma omp parallel shared(db, wl, report) num_threads(threadsNum) \
+#pragma omp parallel shared(db, wl, report, exceptionThrown) num_threads(threadsNum) \
 	reduction(+: oks) reduction(+: bytesRead) reduction(+: bytesWritten)
 	{
 		db->Init(); // per-thread initialization
 		ycsbc::Client client(*db, wl, threadOps);
+		const bool isMaster = omp_get_thread_num() == 0;
 		for (size_t i = 0; i < threadOps; ++i)
 		{
-			if (isLoading) {
-				oks += client.DoInsert();
-			} else {
-				oks += client.DoTransaction();
-			}
+#pragma omp flush (exceptionThrown)
+		    if (exceptionThrown != nullptr)
+		        break;
+		    try
+		    {
+                if (isLoading) {
+                    oks += client.DoInsert();
+                } else {
+                    oks += client.DoTransaction();
+                }
+                if ((i + 1) % reportRange == 0 && isMaster)
+                    clog << (i + 1) / reportRange << "0% done" << endl;
+		    }
+		    catch (...)
+		    {
+		        // hopefully, state is consistent enough for all the wrap-up work
+		        exceptionThrown = current_exception();
+#pragma omp flush (exceptionThrown)
+		        break;
+		    }
 		}
 		db->Close(); // per-thread cleanup
-		if (!isLoading && omp_get_thread_num() == 0)
+		if (!isLoading && isMaster)
 			report = buildOpsReport(client);
         bytesRead = client.getBytesRead();
         bytesWritten = client.getBytesWritten();
@@ -181,23 +201,29 @@ int main(const int argc, const char *argv[]) {
   cerr << "Using " << num_threads << " threads" << endl;
 
   string statsReport;
-  size_t oks = runOps(num_threads, init_ops / num_threads, true, db, wl, statsReport);
+  exception_ptr exceptionThrown{nullptr};
+  size_t oks = runOps(num_threads, init_ops / num_threads, true, db, wl, statsReport, exceptionThrown);
   cerr << "Loaded " << oks << " records, running workload..." << endl;
 
-  // Peforms transactions
-  const int total_ops = stoi(props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
-  utils::Timer<double> timer;
-  timer.Start();
-  oks = runOps(num_threads, total_ops / num_threads, false, db, wl, statsReport);
-  double duration = timer.End();
-  cerr << "[OVERALL], RunTime(ms), " << duration * 1000 << endl;
-  cerr << "[OVERALL], Throughput(ops/sec), " << (uint64_t)(total_ops / duration) << endl;
-  cerr << "[OVERALL], Successful ops: " << oks << " out of " << total_ops << endl;
-  cerr << statsReport << endl;
-//  cerr << "# Transaction throughput (KTPS)" << endl;
-//  cerr << props["dbname"] << '\t' << file_name << '\t' << num_threads << '\t';
-//  cerr << total_ops / duration / 1000 << endl;
+  if (exceptionThrown == nullptr)
+  {
+      // Peforms transactions
+      const int total_ops = stoi(props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
+      utils::Timer<double> timer;
+      timer.Start();
+      oks = runOps(num_threads, total_ops / num_threads, false, db, wl, statsReport, exceptionThrown);
+      double duration = timer.End();
+      cerr << "[OVERALL], RunTime(ms), " << duration * 1000 << endl;
+      cerr << "[OVERALL], Throughput(ops/sec), " << (uint64_t)(total_ops / duration) << endl;
+      cerr << "[OVERALL], Successful ops: " << oks << " out of " << total_ops << endl;
+      cerr << statsReport << endl;
+  }
   delete db;
+  if (exceptionThrown != nullptr)
+      // if execution stopped due to an exception, end the run appropriately.
+      // throwing after the reporting to provide more information. this is not safe
+      // and probably ruin core dump, but will hopefully be useful on the common case
+      rethrow_exception(exceptionThrown);
   return 0;
 }
 

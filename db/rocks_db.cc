@@ -9,7 +9,7 @@
 
 #include "rocksdb/slice.h"
 #include "rocksdb/options.h"
-
+//#include <rocksdb/table/block_based_table_factory.h>
 
 using namespace std;
 
@@ -22,6 +22,7 @@ string DBPath = "data_rocksdb";
 
 const string UseFsync = "rocksdb_usefsync";
 const string SyncWrites = "rocksdb_syncwrites";
+const string CacheSize = "rocksdb_cachesize";
 
 bool useFsync(const map<string, string>& props)
 {
@@ -39,6 +40,24 @@ bool syncWrites(const map<string, string>& props)
     return settingToBool(iter->second);
 }
 
+size_t blockCacheSize(const map<string, string>& props)
+{
+    auto iter = props.find(CacheSize);
+    if (iter == props.end())
+        return 0;
+    return stoll(iter->second);
+}
+
+void setCacheBlockSize(const map<string, string>& props, rocksdb::Options& options)
+{
+//    size_t capacity = blockCacheSize(props);
+//    if (capacity == 0)
+//        return;
+//    shared_ptr<rocksdb::Cache> cache = rocksdb::NewLRUCache(capacity);
+//    rocksdb::BlockBasedTableOptions table_options;
+//    table_options.block_cache = cache;
+//    options.table_factory.reset(new rocksdb::BlockBasedTableFactory(table_options));
+}
 } // namespace
 
 RocksDB::RocksDB(const map<string, string>& props, const string& dbDir)
@@ -55,6 +74,8 @@ RocksDB::RocksDB(const map<string, string>& props, const string& dbDir)
 
 	options.use_fsync = useFsync(props);
 	wo.sync = syncWrites(props);
+
+	setCacheBlockSize(props, options);
 
 	// open DB
 	verifyDirExists(dbDir + DBPath);
