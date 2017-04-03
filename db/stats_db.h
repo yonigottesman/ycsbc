@@ -25,6 +25,8 @@ class StatsDb : public DB
     void printStats(size_t chunkSize);
     void calcMunkKeys(const std::map<std::string, std::string>& props,
             size_t& munkKeys, size_t& munkBytesCapacity, size_t& valSize);
+    size_t calcChunkAccesses(size_t munkKeys, std::vector<size_t>& sorted);
+    std::string manipKey(const std::string& key);
 
 public:
     StatsDb(const std::map<std::string, std::string>& props);

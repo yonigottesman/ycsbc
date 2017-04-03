@@ -77,49 +77,55 @@ StatsDb::~StatsDb()
     printStats(givenMunkKeys * 10);
 }
 
-void StatsDb::printStats(size_t munkKeys)
+size_t StatsDb::calcChunkAccesses(size_t munkKeys, vector<size_t>& chunkAccesses)
 {
-    vector<size_t> sorted;
-    sorted.reserve(keyCounters.size() / munkKeys);
-    size_t chunkCtr = 0, keyCtr = 0;
+    size_t chunkCtr = 0, keyCtr = 0, totalAccesses = 0;
+    chunkAccesses.reserve(keyCounters.size() / munkKeys);
     for (auto kc : keyCounters)
     {
         chunkCtr += kc.second;
+        totalAccesses += kc.second;
         ++keyCtr;
         if (keyCtr == munkKeys)
         {
-            sorted.emplace_back(chunkCtr);
+            chunkAccesses.emplace_back(chunkCtr);
             chunkCtr = keyCtr = 0;
         }
     }
     if (keyCtr > 0)
-        sorted.emplace_back(chunkCtr);
-    sort(sorted.begin(), sorted.end(), [](const size_t& kc1, const size_t& kc2) {
-        return kc2 < kc1;
+        chunkAccesses.emplace_back(chunkCtr);
+
+    sort(chunkAccesses.begin(), chunkAccesses.end(), [](const size_t& kc1, const size_t& kc2) {
+        return kc2 < kc1; // sort by access number, decending
     });
-    size_t totalCnts = accumulate(sorted.begin(), sorted.end(), 0, [](size_t total, size_t kc) {
-        return total + kc;
-    });
+    return totalAccesses;
+}
+
+void StatsDb::printStats(size_t munkKeys)
+{
+    vector<size_t> chunkAccesses;
+    const size_t totalCnts = calcChunkAccesses(munkKeys, chunkAccesses);
+
     const double range = (double)totalCnts / 100;
     size_t percentile = 10;
     size_t partTotal = 0;
-    clog << totalCnts << " ops run on " << sorted.size() << " chunks, " << munkKeys <<
+    clog << totalCnts << " ops run on " << chunkAccesses.size() << " chunks, " << munkKeys <<
             " keys per munk" << endl;
-    clog << "max ops per chunk: " << *sorted.begin() <<
-            ", min ops per chunk: " << *sorted.rbegin() << ", " <<
-            sorted.size() - distance(
-                    sorted.begin(),
-                    find_if(sorted.begin(), sorted.end(),
+    clog << "max ops per chunk: " << *chunkAccesses.begin() <<
+            ", min ops per chunk: " << *chunkAccesses.rbegin() << ", " <<
+            chunkAccesses.size() - distance(
+                    chunkAccesses.begin(),
+                    find_if(chunkAccesses.begin(), chunkAccesses.end(),
                             [](size_t keyCnt) { return keyCnt == 0;})) <<
             " chunk with no ops" << endl;
     size_t percentile90 = 0;
-    for (size_t i = 0; i < sorted.size(); ++i)
+    for (size_t i = 0; i < chunkAccesses.size(); ++i)
     {
-        partTotal += sorted[i];
+        partTotal += chunkAccesses[i];
         if (percentile * range <= partTotal)
         {
             clog << setw(3) << percentile << "% of ops obtained by " << setw(8) <<
-                    (i <= 1 ? 1 : i - 1) << " chunks (" << fixed << setprecision(1) << 100.0 * i / sorted.size() << "% of all chunks)" << endl;
+                    (i <= 1 ? 1 : i - 1) << " chunks (" << fixed << setprecision(1) << 100.0 * i / chunkAccesses.size() << "% of all chunks)" << endl;
             if (percentile == 90)
                 percentile90 = i - 1;
             percentile += 10;
@@ -130,24 +136,30 @@ void StatsDb::printStats(size_t munkKeys)
     clog << "Memory footprint for " << percentile90 << " full munks, including values: " << totalRam << endl;
 }
 
+string StatsDb::manipKey(const std::string& key)
+{
+//    return key.substr(4, key.size() - 8);
+    return key;
+}
+
 int StatsDb::Insert(const std::string &table, const std::string &key,
         std::vector<KVPair> &values)
 {
-    keyCounters[key] = 0;
+    keyCounters[manipKey(key)] = 0;
     return DB::kOK;
 }
 
 int StatsDb::Read(const std::string &table, const std::string &key,
         const std::vector<std::string> *fields, std::vector<KVPair> &result)
 {
-    ++keyCounters[key];
+    ++keyCounters[manipKey(key)];
     return DB::kOK;
 }
 
 int StatsDb::Update(const std::string &table, const std::string &key,
         std::vector<KVPair> &values)
 {
-    ++keyCounters[key];
+    ++keyCounters[manipKey(key)];
     return DB::kOK;
 }
 
@@ -155,7 +167,7 @@ int StatsDb::Scan(const std::string &table, const std::string &key, int record_c
         const std::vector<std::string> *fields,
         std::vector<std::vector<KVPair>> &result)
 {
-    auto iter = keyCounters.find(key);
+    auto iter = keyCounters.find(manipKey(key));
     for (int c = 0; c < record_count && iter != keyCounters.end(); ++c, ++iter)
         ++iter->second;
     return DB::kOK;

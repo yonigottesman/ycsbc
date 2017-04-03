@@ -14,6 +14,7 @@
 #include "core_workload.h"
 #include "utils.h"
 #include "statistics.h"
+#include "histogram_accumulator.h"
 
 namespace ycsbc {
 
@@ -22,7 +23,8 @@ class Client
 public:
 	Client(DB &db, CoreWorkload &wl, size_t opsNum) :
 			db_(db), workload_(wl),
-			stats(OPS_NUM, Statistics(opsNum)), scanStats(opsNum)
+			stats(OPS_NUM, Statistics(opsNum)), scanStats(opsNum),
+			histograms(OPS_NUM, HistogramAccumulator(0.0, 1.0, 40))
 			// note: opsNum refer to all ops, while stats are gathered separately.
 			// depending on the mix, the actual number of events passed to a stats
 			// object can be much smaller than the declared.
@@ -41,6 +43,9 @@ public:
 	}
 	const Statistics& getScanStats() const {
 		return scanStats;
+	}
+	const HistogramAccumulator& getHistogram(Operation op) const {
+	    return histograms[op];
 	}
     size_t getBytesRead() const {
         return bytesRead;
@@ -61,6 +66,7 @@ protected:
 	CoreWorkload &workload_;
 	std::vector<Statistics> stats;
 	Statistics scanStats;
+	std::vector<HistogramAccumulator> histograms;
 	size_t bytesRead = 0, bytesWritten = 0;
 	utils::Timer<double> timer; // ok since each client is used by a single thread
 };
@@ -96,7 +102,9 @@ inline bool Client::DoTransaction() {
     default:
       throw utils::Exception("Operation request is not recognized!");
   }
-  stats[op].addEvent(timer.End() * 1000);
+  double dur = timer.End() * 1000;
+  stats[op].addEvent(dur);
+  histograms[op].addVal(dur);
   assert(status >= 0);
   return (status == DB::kOK);
 }

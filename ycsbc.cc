@@ -17,6 +17,7 @@
 #include <iomanip>
 #include <exception>
 #include <stdexcept>
+#include <ctime>
 #include <omp.h>
 #include "core/utils.h"
 #include "core/timer.h"
@@ -46,16 +47,36 @@ int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const int num_ops,
   return oks;
 }
 
+string histToStr(const vector<size_t>& histogram,
+        size_t totalVals, double minVal, double bucketSize)
+{
+    size_t maxHeight = (100 * *max_element(histogram.begin(), histogram.end()))
+            / totalVals;
+    stringstream ss;
+    ss << "Data elements collected: " << totalVals << endl; //XXX
+    ss << fixed << endl;
+    for (size_t b = 0; b < histogram.size(); ++b)
+    {
+        double n = (100.0 * histogram[b]) / totalVals;
+        if (n == 0)
+            continue;
+        size_t h = n;
+        ss << setw(4) << setfill(' ') << setprecision(2)
+                << (minVal + bucketSize * b) << ": " << setfill(']') << setw(h)
+                << "] " << setfill(' ') << setw(maxHeight - h + 2) << " (" << n
+                << "%)" << endl;
+    }
+    return ss.str();
+}
+
 string buildHistogram(const vector<double>& partMeans)
 {
-    if (partMeans.empty())
-        return "";
     auto minmax = minmax_element(partMeans.begin(), partMeans.end());
     double minVal = *minmax.first;
     double maxVal = *minmax.second;
-    constexpr size_t BucketsNum = 10, Scale = 1;
+    constexpr size_t BucketsNum = 10;
     double bucketSize = (maxVal - minVal) / BucketsNum;
-    array<size_t, BucketsNum> histogram{};
+    vector<size_t> histogram(BucketsNum);
     for (double m : partMeans)
     {
         size_t bucket = (m - minVal) / bucketSize;
@@ -63,17 +84,7 @@ string buildHistogram(const vector<double>& partMeans)
             --bucket;
         ++histogram[bucket];
     }
-    size_t maxHeight = (100 * *max_element(histogram.begin(), histogram.end())) / partMeans.size() / Scale;
-    stringstream ss;
-    ss << "Histogram: " << fixed << endl;
-    for (size_t b = 0; b < BucketsNum; ++b)
-    {
-        double n = (100.0 * histogram[b]) / partMeans.size();
-        size_t h = n / Scale;
-        ss << setw(4) << setfill(' ') << setprecision(2) << (minVal + bucketSize * b) << ": " << setfill(']') <<
-                setw(h) << "] " << setfill(' ') << setw(maxHeight - h + 2) << " (" << n << "%)" << endl;
-    }
-    return ss.str();
+    return histToStr(histogram, partMeans.size(), minVal, bucketSize);
 }
 
 string buildOpsReport(const ycsbc::Client& client)
@@ -111,7 +122,17 @@ string buildOpsReport(const ycsbc::Client& client)
 //				ss << "\n";
 			}
 		}
-		ss << buildHistogram(partMeans);
+	    if (!partMeans.empty())
+	    {
+            ss << "Histogram based on average latency per window: " << endl;
+            ss << buildHistogram(partMeans);
+	    }
+        const auto& hist = client.getHistogram((ycsbc::Operation)i);
+        if (hist.getTotalOps() > 0)
+        {
+            ss << "Histogram based on predefined time buckets: " << endl;
+            ss << histToStr(hist.getCounts(), hist.getTotalOps(), hist.getMinVal(), hist.getBucketRange());
+        }
 	}
 	return ss.str();
 }
@@ -133,6 +154,13 @@ string buildIoReport(size_t bytesRead, size_t bytesWritten, const ycsbc::SysStat
             "\ntotal system time (sec):  " << stats.sysTime <<
             endl;
     return ss.str();
+}
+
+void reportProgress(size_t prog)
+{
+    time_t t = time(nullptr);
+    auto tm = *localtime(&t);
+    clog << prog << "% done @ " << put_time(&tm, "%d/%m/%Y %H:%M:%S") << endl;
 }
 
 size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoading,
@@ -161,7 +189,7 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
                     oks += client.DoTransaction();
                 }
                 if ((i + 1) % reportRange == 0 && isMaster)
-                    clog << (i + 1) / reportRange << "0% done" << endl;
+                    reportProgress((i + 1) * 10 / reportRange);
 		    }
 		    catch (...)
 		    {
@@ -179,6 +207,23 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
 	}
 	report += buildIoReport(bytesRead, bytesWritten, beginStats);
 	return oks;
+}
+
+string durToTime(double usDuration)
+{
+    size_t msDur = usDuration * 1000;
+    size_t millis = msDur % 1000;
+    msDur /= 1000;
+    tm t = {0};
+    t.tm_sec = msDur % 60;
+    msDur /= 60;
+    t.tm_min = msDur % 60;
+    msDur /= 60;
+    t.tm_hour = msDur;
+    stringstream ss;
+    ss << t.tm_hour << ":" << setfill('0') << setw(2) << t.tm_min << ":" <<
+            setfill('0') << setw(2) << t.tm_sec << "." << setfill('0') << setw(4) << millis;
+    return ss.str();
 }
 
 int main(const int argc, const char *argv[]) {
@@ -212,10 +257,10 @@ int main(const int argc, const char *argv[]) {
       utils::Timer<double> timer;
       timer.Start();
       oks = runOps(num_threads, total_ops / num_threads, false, db, wl, statsReport, exceptionThrown);
-      double duration = timer.End();
-      cerr << "[OVERALL], RunTime(ms), " << duration * 1000 << endl;
-      cerr << "[OVERALL], Throughput(ops/sec), " << (uint64_t)(total_ops / duration) << endl;
-      cerr << "[OVERALL], Successful ops: " << oks << " out of " << total_ops << endl;
+      double usDuration = timer.End();
+      cerr << "[OVERALL] Run time: " << durToTime(usDuration) << endl;
+      cerr << "[OVERALL] Throughput(ops/sec): " << (uint64_t)(total_ops / usDuration) << endl;
+      cerr << "[OVERALL] Successful ops: " << oks << " out of " << total_ops << endl;
       cerr << statsReport << endl;
   }
   delete db;
