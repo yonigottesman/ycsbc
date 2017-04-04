@@ -11,6 +11,7 @@
 #include "scrambled_zipfian_generator.h"
 #include "skewed_latest_generator.h"
 #include "complex_zipfian_generator.h"
+#include "flurry_generator.h"
 #include "const_generator.h"
 #include "core_workload.h"
 
@@ -162,6 +163,14 @@ void CoreWorkload::Init(const utils::Properties &p) {
     if (key_range_ == 0)
         key_range_ = std::max<size_t>(record_count_, op_count * insert_proportion) * 2; // a fudge factor
     key_chooser_ = new ComplexZipfianGenerator(key_range_);
+
+  } else if (request_dist == "flurry") {
+    int op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY));
+    if (key_range_ == 0)
+        key_range_ = std::max<size_t>(record_count_, op_count * insert_proportion) * 2; // a fudge factor
+    constexpr size_t PaddingPart = 4;
+    const size_t PaddingBits = std::log2(record_count_) / PaddingPart;
+    key_chooser_ = new FlurryGenerator(key_range_, PaddingBits);
 
   } else if (request_dist == "latest") {
     if (key_range_ == 0)

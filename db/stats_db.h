@@ -15,9 +15,67 @@
 namespace ycsbc
 {
 
+class Hash
+{
+    uint32_t hash = 0;
+public:
+    Hash(const std::string& str) {
+        size_t len = (str.size() < 16) ? str.size() : 16;
+        for (size_t i = 0; i < len; ++i)
+        {
+//            hash = (hash << 1) | (str[i] > '4' ? 1 : 0);
+            uint8_t val;
+            switch ((int)((str[i] - '0') / 2.5)) {
+            case 0:  val = 0; break;
+            case 1:  val = 1; break;
+            case 2:  val = 2; break;
+            default: val = 3; break;
+            }
+            hash = (hash << 2) | val;
+        }
+    }
+    Hash(const Hash& other) : hash(other.hash) {}
+    bool operator<(const Hash& other) const {
+        return hash < other.hash;
+    }
+    bool operator==(const Hash& other) const {
+        return hash == other.hash;
+    }
+    uint32_t hashVal() const {
+        return hash;
+    }
+};
+
+extern size_t usedHash;
+extern size_t usedStr;
+
+class HasheKey : public std::string
+{
+    Hash hash;
+public:
+    HasheKey(const HasheKey& other) : std::string(other), hash(other.hash) {}
+    HasheKey(const std::string& str) : std::string(str), hash(str) {}
+    bool operator<(const HasheKey& other) const {
+        if (hash == other.hash)
+        {
+//            ++usedStr;
+            return static_cast<const std::string&>(*this) < other;
+        }
+        else
+        {
+//            ++usedHash;
+            return hash < other.hash;
+        }
+    }
+    const Hash& getHash() const {
+        return hash;
+    }
+};
+
 class StatsDb : public DB
 {
-    std::map<std::string, size_t> keyCounters;
+    std::map<HasheKey, size_t> keyCounters;
+//    std::map<std::string, size_t> keyCounters;
     const size_t givenMunkKeys = 0;
     const size_t munkBytesCapacity = 0;
     const size_t valSize = 0;

@@ -18,6 +18,9 @@ using namespace std;
 namespace ycsbc
 {
 
+size_t usedHash = 0;
+size_t usedStr = 0;
+
 struct KeyCnt
 {
     size_t count;
@@ -75,6 +78,8 @@ StatsDb::~StatsDb()
     printStats(givenMunkKeys / 10);
     clog << "\nKey-level distribution with munks 10 time larger:" << endl;
     printStats(givenMunkKeys * 10);
+
+    clog << "*** usedHash = " << usedHash << ", usedStr == " << usedStr << endl; //XXX
 }
 
 size_t StatsDb::calcChunkAccesses(size_t munkKeys, vector<size_t>& chunkAccesses)
@@ -122,10 +127,11 @@ void StatsDb::printStats(size_t munkKeys)
     for (size_t i = 0; i < chunkAccesses.size(); ++i)
     {
         partTotal += chunkAccesses[i];
-        if (percentile * range <= partTotal)
+        while (percentile * range <= partTotal)
         {
             clog << setw(3) << percentile << "% of ops obtained by " << setw(8) <<
-                    (i <= 1 ? 1 : i - 1) << " chunks (" << fixed << setprecision(1) << 100.0 * i / chunkAccesses.size() << "% of all chunks)" << endl;
+                    i + 1/*(i <= 1 ? 1 : i - 1)*/ << " chunks (" << fixed << setprecision(1) <<
+                    100.0 * (i + 1) / chunkAccesses.size() << "% of all chunks)" << endl;
             if (percentile == 90)
                 percentile90 = i - 1;
             percentile += 10;
@@ -134,6 +140,10 @@ void StatsDb::printStats(size_t munkKeys)
     size_t entrySize = munkBytesCapacity / givenMunkKeys;
     size_t totalRam = percentile90 * munkKeys * (entrySize + valSize);
     clog << "Memory footprint for " << percentile90 << " full munks, including values: " << totalRam << endl;
+//    clog << "Chunk accesses: " << endl;
+//    for (auto acc : chunkAccesses)
+//        clog << acc << ",";
+//    clog << endl;
 }
 
 string StatsDb::manipKey(const std::string& key)
