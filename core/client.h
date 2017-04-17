@@ -69,6 +69,12 @@ protected:
 	std::vector<HistogramAccumulator> histograms;
 	size_t bytesRead = 0, bytesWritten = 0;
 	utils::Timer<double> timer; // ok since each client is used by a single thread
+
+private:
+    void placeKeyInValue(std::vector<DB::KVPair>& values,
+            const std::string& key) const;
+    bool checkKeyInValue(const std::vector<DB::KVPair>& result,
+            const std::string& key) const;
 };
 
 inline bool Client::DoInsert() {
@@ -120,7 +126,18 @@ inline int Client::TransactionRead() {
   }
   int ret = db_.Read(table, key, readFields, result);
   if (!result.empty())
-      bytesRead += result[0].second.size();
+  {
+    bytesRead += result[0].second.size();
+    if (workload_.validateGets())
+    {
+        bool ok = checkKeyInValue(result, key);
+        if (!ok)
+        {
+            std::cerr << "Read of key " << key << " returned wrong value " << result[0].second << std::endl;
+            return DB::kErrorNoData;
+        }
+    }
+  }
   return ret;
 }
 
@@ -174,6 +191,8 @@ inline int Client::TransactionUpdate() {
   } else {
     workload_.BuildUpdate(values);
   }
+  if (workload_.validateGets())
+    placeKeyInValue(values, key);
   bytesWritten += key.size() + values[0].second.size();
   return db_.Update(table, key, values);
 }
@@ -183,9 +202,28 @@ inline int Client::TransactionInsert() {
   const std::string &key = workload_.NextSequenceKey();
   std::vector<DB::KVPair> values;
   workload_.BuildValues(values);
+  if (workload_.validateGets())
+    placeKeyInValue(values, key);
   bytesWritten += key.size() + values[0].second.size();
   return db_.Insert(table, key, values);
 } 
+
+inline void Client::placeKeyInValue(std::vector<DB::KVPair>& values,
+        const std::string& key) const
+{
+    std::string& value = values[0].second;
+    size_t copylen = std::max(key.size(), value.size());
+    std::copy(key.c_str(), key.c_str() + copylen, &value[0]);
+}
+
+bool Client::checkKeyInValue(const std::vector<DB::KVPair>& result,
+        const std::string& key) const
+{
+    const std::string& value = result[0].second;
+    size_t complen = std::max(key.size(), value.size());
+    bool ok = std::strncmp(key.c_str(), value.c_str(), complen) == 0;
+    return ok;
+}
 
 } // ycsbc
 

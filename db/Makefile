@@ -2,8 +2,10 @@ CXX=g++
 OPT=-O3 -DNDEBUG
 CXXFLAGS=-std=c++11 -c -g $(OPT) -Wall -fgnu-tm
 #CXXFLAGS=-std=c++11 -c -g -Wall
-ROCKSDB_ROOT = ../../rocksdb5
-INCLUDES=-I../ -isystem ../../piwi/include -isystem $(ROCKSDB_ROOT)/include
+EXT_INC_ROOT = ../..
+ROCKSDB_INC = $(EXT_INC_ROOT)/rocksdb5/include
+PIWI_INC = $(EXT_INC_ROOT)/piwi/include
+INCLUDES=-I../ -isystem $(PIWI_INC) -isystem $(ROCKSDB_INC)
 SOURCES=$(wildcard *.cc)
 OBJECTS=$(SOURCES:.cc=.o)
 

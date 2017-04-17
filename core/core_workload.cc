@@ -81,6 +81,9 @@ const string CoreWorkload::KEY_RANGE_DEFAULT = "0";
 const string CoreWorkload::EXACT_KEY_SIZE = "exact_key_size";
 const string CoreWorkload::EXACT_KEY_SIZE_DEFAULT = "24";
 
+const string CoreWorkload::VALIDATE_GETS_PROPERTY = "validateGets";
+const string CoreWorkload::VALIDATE_GETS_DEFAULT = "false";
+
 void CoreWorkload::Init(const utils::Properties &p) {
   table_name_ = p.GetProperty(TABLENAME_PROPERTY,TABLENAME_DEFAULT);
   
@@ -195,6 +198,9 @@ void CoreWorkload::Init(const utils::Properties &p) {
   string keySize = p.GetProperty(EXACT_KEY_SIZE, EXACT_KEY_SIZE_DEFAULT);
   if (!keySize.empty())
 	  exact_key_size_ = std::stoi(keySize);
+
+  validateGets_ = utils::StrToBool(p.GetProperty(VALIDATE_GETS_PROPERTY,
+                                                 VALIDATE_GETS_DEFAULT));
 }
 
 ycsbc::Generator<uint64_t> *CoreWorkload::GetFieldLenGenerator(

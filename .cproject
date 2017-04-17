@@ -87,6 +87,16 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<folderInfo id="cdt.managedbuild.toolchain.gnu.cross.base.208978609.1459475545.1374247937" name="/" resourcePath="data_rocksdb">
+						<toolChain id="cdt.managedbuild.toolchain.gnu.base.259109864" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.base" unusedChildren="">
+							<tool id="cdt.managedbuild.tool.gnu.archiver.base.1889481704" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base.1798598432"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.2001609985" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base.760005992"/>
+							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.471053194" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base.309023557"/>
+							<tool id="cdt.managedbuild.tool.gnu.c.linker.base.1077852585" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.base.1501015576"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.base.1727030570" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.base.1996621177"/>
+							<tool id="cdt.managedbuild.tool.gnu.assembler.base.238738231" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.base.474859656"/>
+						</toolChain>
+					</folderInfo>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>

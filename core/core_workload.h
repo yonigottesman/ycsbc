@@ -165,6 +165,9 @@ class CoreWorkload {
   static const std::string EXACT_KEY_SIZE;
   static const std::string EXACT_KEY_SIZE_DEFAULT;
 
+  /// if true, places the key in the value on puts and checks value on gets
+  static const std::string VALIDATE_GETS_PROPERTY;
+  static const std::string VALIDATE_GETS_DEFAULT;
   ///
   /// Initialize the scenario.
   /// Called once, in the main client thread, before any operations are started.
@@ -183,12 +186,14 @@ class CoreWorkload {
   
   bool read_all_fields() const { return read_all_fields_; }
   bool write_all_fields() const { return write_all_fields_; }
+  bool validateGets() const { return validateGets_; }
 
   CoreWorkload() :
       field_count_(0), read_all_fields_(false), write_all_fields_(false),
       field_len_generator_(NULL), key_generator_(NULL), key_chooser_(NULL),
       field_chooser_(NULL), scan_len_chooser_(NULL), insert_key_sequence_(3),
-      ordered_inserts_(true), record_count_(0), key_range_(0), exact_key_size_(24) {
+      ordered_inserts_(true), record_count_(0), key_range_(0), exact_key_size_(24),
+      validateGets_(false) {
   }
   
   virtual ~CoreWorkload() {
@@ -218,6 +223,7 @@ class CoreWorkload {
   size_t record_count_;
   size_t key_range_;
   size_t exact_key_size_;
+  bool validateGets_;
 };
 
 inline std::string CoreWorkload::NextSequenceKey() {

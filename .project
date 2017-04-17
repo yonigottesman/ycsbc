@@ -35,12 +35,76 @@
 			</matcher>
 		</filter>
 		<filter>
+			<id>1492432440080</id>
+			<name>data</name>
+			<type>6</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1492432453413</id>
+			<name>data_piwi</name>
+			<type>6</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1492432463477</id>
+			<name>data_piwi_partitions</name>
+			<type>6</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1492432472687</id>
+			<name>data_piwi_storage</name>
+			<type>6</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1492432386396</id>
+			<name>data_rocksdb</name>
+			<type>6</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1492432426267</id>
+			<name>data_rocksdb_partitions</name>
+			<type>6</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1492432491385</id>
+			<name>data_rocksdb_storage</name>
+			<type>6</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+			</matcher>
+		</filter>
+		<filter>
 			<id>1481110820472</id>
 			<name>db</name>
 			<type>6</type>
 			<matcher>
 				<id>org.eclipse.ui.ide.multiFilter</id>
 				<arguments>1.0-name-matches-false-false-*.o</arguments>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1492432505254</id>
+			<name>results</name>
+			<type>6</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
 			</matcher>
 		</filter>
 	</filteredResources>
