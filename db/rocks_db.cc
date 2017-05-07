@@ -7,9 +7,13 @@
 
 #include "rocks_db.h"
 
-#include "rocksdb/slice.h"
-#include "rocksdb/options.h"
-//#include <rocksdb/table/block_based_table_factory.h>
+#include <rocksdb/slice.h>
+#include <rocksdb/options.h>
+#include <port/port_posix.h>
+#include <table/block_based_table_factory.h>
+
+#include <algorithm>
+#include <cctype>
 
 using namespace std;
 
@@ -23,6 +27,7 @@ string DBPath = "data_rocksdb";
 const string UseFsync = "rocksdb_usefsync";
 const string SyncWrites = "rocksdb_syncwrites";
 const string CacheSize = "rocksdb_cachesize";
+const string Compression = "compression";
 
 bool useFsync(const map<string, string>& props)
 {
@@ -50,14 +55,41 @@ size_t blockCacheSize(const map<string, string>& props)
 
 void setCacheBlockSize(const map<string, string>& props, rocksdb::Options& options)
 {
-//    size_t capacity = blockCacheSize(props);
-//    if (capacity == 0)
-//        return;
-//    shared_ptr<rocksdb::Cache> cache = rocksdb::NewLRUCache(capacity);
-//    rocksdb::BlockBasedTableOptions table_options;
-//    table_options.block_cache = cache;
-//    options.table_factory.reset(new rocksdb::BlockBasedTableFactory(table_options));
+    size_t capacity = blockCacheSize(props);
+    if (capacity == 0)
+        return;
+    shared_ptr<rocksdb::Cache> cache = rocksdb::NewLRUCache(capacity);
+    rocksdb::BlockBasedTableOptions table_options;
+    table_options.block_cache = cache;
+    options.table_factory.reset(new rocksdb::BlockBasedTableFactory(table_options));
+    clog << "block cache size set to " << capacity << endl; //XXX
 }
+
+rocksdb::CompressionType doCompress(const map<string, string>& props,
+        rocksdb::CompressionType defaultCompress)
+{
+    auto iter = props.find(Compression);
+    if (iter == props.end())
+        return defaultCompress;
+    string comp = iter->second;
+    transform(comp.begin(), comp.end(), comp.begin(), [](char c) { return tolower(c); });
+    if (comp == "off" || comp == "no" || comp == "false")
+        return rocksdb::kNoCompression;
+    if (comp == "on" || comp == "yes" || comp == "true")
+        return rocksdb::kSnappyCompression;
+    return defaultCompress;
+}
+
+void setCompression(const map<string, string>& props, rocksdb::Options& options)
+{
+    constexpr rocksdb::CompressionType defaultCompression =
+            rocksdb::kNoCompression;
+    auto compression = doCompress(props, defaultCompression);
+    options.compression = compression;
+    fill(options.compression_per_level.begin(), options.compression_per_level.end(), compression);
+}
+
+
 } // namespace
 
 RocksDB::RocksDB(const map<string, string>& props, const string& dbDir)
@@ -76,6 +108,7 @@ RocksDB::RocksDB(const map<string, string>& props, const string& dbDir)
 	wo.sync = syncWrites(props);
 
 	setCacheBlockSize(props, options);
+    setCompression(props, options);
 
 	// open DB
 	verifyDirExists(dbDir + DBPath);

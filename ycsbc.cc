@@ -324,8 +324,10 @@ string addPropsFromFile(int argc, const char* argv[], int& argindex,
 string ParseCommandLine(int argc, const char *argv[], utils::Properties &props) {
 	int argindex = 1;
 	string filename;
+	stringstream cmdline;
 	while (argindex < argc && StrStartWith(argv[argindex], "-"))
 	{
+	    cmdline << argv[argindex] << " " << argv[argindex] << " ";
 		if (strcmp(argv[argindex], "-threads") == 0)
 			addProp(argc, argv, "threadcount", argindex, props);
 		else if (strcmp(argv[argindex], "-db") == 0)
@@ -341,6 +343,7 @@ string ParseCommandLine(int argc, const char *argv[], utils::Properties &props) 
 		else
 			customProp(argc, argv, argindex, props);
 	}
+	cout << "Given command line args: " << cmdline.str() << endl;
 
 	if (argindex == 1 || argindex != argc)
 	{
