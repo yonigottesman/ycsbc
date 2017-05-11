@@ -53,7 +53,7 @@ string histToStr(const vector<size_t>& histogram,
     size_t maxHeight = (100 * *max_element(histogram.begin(), histogram.end()))
             / totalVals;
     stringstream ss;
-    ss << "Data elements collected: " << totalVals << endl; //XXX
+    ss << "Data elements collected: " << totalVals << endl;
     ss << fixed << endl;
     for (size_t b = 0; b < histogram.size(); ++b)
     {
@@ -327,7 +327,7 @@ string ParseCommandLine(int argc, const char *argv[], utils::Properties &props) 
 	stringstream cmdline;
 	while (argindex < argc && StrStartWith(argv[argindex], "-"))
 	{
-	    cmdline << argv[argindex] << " " << argv[argindex] << " ";
+	    cmdline << argv[argindex] << " " << argv[argindex + 1] << " ";
 		if (strcmp(argv[argindex], "-threads") == 0)
 			addProp(argc, argv, "threadcount", argindex, props);
 		else if (strcmp(argv[argindex], "-db") == 0)

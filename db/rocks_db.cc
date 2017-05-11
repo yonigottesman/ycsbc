@@ -62,7 +62,6 @@ void setCacheBlockSize(const map<string, string>& props, rocksdb::Options& optio
     rocksdb::BlockBasedTableOptions table_options;
     table_options.block_cache = cache;
     options.table_factory.reset(new rocksdb::BlockBasedTableFactory(table_options));
-    clog << "block cache size set to " << capacity << endl; //XXX
 }
 
 rocksdb::CompressionType doCompress(const map<string, string>& props,

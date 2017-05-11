@@ -79,7 +79,7 @@ StatsDb::~StatsDb()
     clog << "\nKey-level distribution with munks 10 time larger:" << endl;
     printStats(givenMunkKeys * 10);
 
-    clog << "*** usedHash = " << usedHash << ", usedStr == " << usedStr << endl; //XXX
+    clog << "*** usedHash = " << usedHash << ", usedStr == " << usedStr << endl;
 }
 
 size_t StatsDb::calcChunkAccesses(size_t munkKeys, vector<size_t>& chunkAccesses)
