@@ -6,8 +6,6 @@ OBJECTS=$(SOURCES:.cc=.o)
 
 ifeq ($(findstring O0, $(OPT)), O0)
 	CXXFLAGS += -fsanitize=undefined -fbounds-check
-#	CXXFLAGS += -fno-sanitize-recover
-#	CXXFLAGS += -D_GLIBCXX_DEBUG
 endif
 
 all: $(SOURCES) $(OBJECTS)

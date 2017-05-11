@@ -1,7 +1,6 @@
 CXX        = g++
 OPT        = -O3 -DNDEBUG
 CXXFLAGS   = -std=c++11 -g $(OPT) -Wall -pthread -I./
-#LDFLAGS    = -lpthread -ltbb -lhiredis
 LIBPIWI    = -Wl,-rpath,'../piwi' -L../piwi
 ROCKSDB_SO = librocksdb.so
 
@@ -9,20 +8,13 @@ ifeq ($(findstring O0, $(OPT)), O0)
 	LIBPIWI += -lpiwi_d
 	ROCKSDB_SO = librocksdb_debug.so
 	CXXFLAGS += -fsanitize=undefined -fbounds-check
-#	CXXFLAGS += -fno-sanitize-recover
-#	CXXFLAGS += -D_GLIBCXX_DEBUG
 	ASAN_LIB = -lasan
 else
 	LIBPIWI += -lpiwi
 endif
-#LIBPIWI   = ../piwi/piwi.a
-ROCKS_ROOT = ../rocksdb5
+ROCKS_ROOT = ../rocksdb
 LIBROCKS   = -Wl,-rpath,'$(ROCKS_ROOT)' -L$(ROCKS_ROOT) -l:$(ROCKSDB_SO)
-#LIBROCKS   = ../rocksdb/librocksdb.a ../rocksdb/libbz2.a ../rocksdb/libz.a ../rocksdb/libsnappy.a 
-#LDFLAGS   = -Wl,-rpath,'../rocksdb' -Wl,-rpath-link,../rocksdb -lpthread -ltbb $(LIBPIWI) $(LIBROCKS)
 LDFLAGS    = $(ASAN_LIB) -lpthread $(LIBPIWI) $(LIBROCKS) -fopenmp
-#LDFLAGS    = -lpthread -ltbb —L./redis/hiredis -lhiredis
-#SUBDIRS    = core db redis
 SUBDIRS    = core db
 SUBSRCS    = $(wildcard core/*.cc) $(wildcard db/*.cc)
 OBJECTS    = $(SUBSRCS:.cc=.o)
