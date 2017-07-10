@@ -161,7 +161,7 @@ void reportProgress(size_t prog)
     time_t t = time(nullptr);
     auto tm = *localtime(&t);
     clog << prog << "% done @ " << put_time(&tm, "%d/%m/%Y %H:%M:%S") << endl;
-    cout << prog << "% done @ " << put_time(&tm, "%d/%m/%Y %H:%M:%S") << endl;
+ //   cout << prog << "% done @ " << put_time(&tm, "%d/%m/%Y %H:%M:%S") << endl;
 }
 
 //void periodicProgress(std::atomic<bool>& stopFlag, std::atomic<size_t>& insertCtr, std::atomic<size_t>& transacCtr){
@@ -178,17 +178,14 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
 	size_t oks = 0, bytesRead = 0, bytesWritten = 0;
 	const size_t reportRange = threadOps / 500; //the thread defined as master (thread 0) will report every 1/100th of the workload it completes.
 	ycsbc::SysStats beginStats = ycsbc::getSysStats(); //SysStats count writes to disk, writes in general, user/sys time, calls to read/write
-//	std::atomic<bool> stopFlag = false;
-//	std::atomic<size_t> insertCtr = 0;
-//	std::atomic<size_t> transacCtr = 0;
-
-//	std::async(periodicProgress(stopFlag, insertCtr, transacCtr));
+//	ycsbc::Client* clients = new ycsbc::Client*[threadsNum];
 
 	//explanation on pragma omp parallel: https://www.ibm.com/support/knowledgecenter/en/SSGH2K_11.1.0/com.ibm.xlc111.aix.doc/compiler_ref/prag_omp_parallel.html
 #pragma omp parallel shared(db, wl, report, exceptionThrown) num_threads(threadsNum) \
 	reduction(+: oks) reduction(+: bytesRead) reduction(+: bytesWritten)
 	{
 		db->Init(); // per-thread initialization (does nothing in either rocksdb or piwi. Empty implementation)
+//		clients[omp_get_thread_num] = new ycsbc::Client(*db, wl, threadOps);
 		ycsbc::Client client(*db, wl, threadOps);
 		const bool isMaster = omp_get_thread_num() == 0;
 		for (size_t i = 0; i < threadOps; ++i)
@@ -209,7 +206,7 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
                     oks += client.DoTransaction();
                 }
                 if ((i + 1) % reportRange == 0 && isMaster)
-                    reportProgress((i + 1) * 500 / reportRange);
+                    reportProgress((i + 1) *100/ threadOps);
 		    }
 		    catch (...)
 		    {
@@ -226,6 +223,7 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
         bytesWritten = client.getBytesWritten();
 	}
 	report += buildIoReport(bytesRead, bytesWritten, beginStats); //adds more specs to output
+	delete[] clients;
 	return oks;
 }
 
@@ -275,8 +273,7 @@ int main(const int argc, const char *argv[]) {
   exception_ptr exceptionThrown{nullptr};
 
   //initialization of db - run Ops to intialize.
-  //todo - add flag to enable timing in this phase.
-  //todo - see if can initialize sequentially/randomly and add timing.
+  //todo nurit - see if can initialize sequentially/randomly and add timing.
   size_t oks = runOps(num_threads, init_ops / num_threads, true, db, wl, statsReport, exceptionThrown);
   cerr << "Loaded " << oks << " records, running workload..." << endl;
 
