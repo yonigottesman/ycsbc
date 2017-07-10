@@ -223,7 +223,7 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
         bytesWritten = client.getBytesWritten();
 	}
 	report += buildIoReport(bytesRead, bytesWritten, beginStats); //adds more specs to output
-	delete[] clients;
+	//delete[] clients;
 	return oks;
 }
 
