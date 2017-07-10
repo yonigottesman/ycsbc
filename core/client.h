@@ -24,7 +24,7 @@ public:
 	Client(DB &db, CoreWorkload &wl, size_t opsNum) :
 			db_(db), workload_(wl),
 			stats(OPS_NUM, Statistics(opsNum)), scanStats(opsNum),
-			histograms(OPS_NUM, HistogramAccumulator(0.0, 1.0, 40))
+			histograms(OPS_NUM, HistogramAccumulator(0.0, 2.0, 20000))
 			// note: opsNum refer to all ops, while stats are gathered separately.
 			// depending on the mix, the actual number of events passed to a stats
 			// object can be much smaller than the declared.
@@ -109,8 +109,8 @@ inline bool Client::DoTransaction() {
       throw utils::Exception("Operation request is not recognized!");
   }
   double dur = timer.End() * 1000;
-  stats[op].addEvent(dur);
-  histograms[op].addVal(dur);
+  stats[op].addEvent(dur); //not thread safe
+  histograms[op].addVal(dur); //not thread safe
   assert(status >= 0);
   return (status == DB::kOK);
 }

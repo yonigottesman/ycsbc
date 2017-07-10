@@ -143,8 +143,10 @@ void CoreWorkload::Init(const utils::Properties &p) {
     op_chooser_.AddValue(READMODIFYWRITE, readmodifywrite_proportion);
   }
   
-  insert_key_sequence_.Set(record_count_); // is needed for anyone but "latest"?
+  insert_key_sequence_.Set(record_count_); // is only needed for request_dist="latest"?
+
   
+  //choose the required generator type, set the range and initialize the generator
   if (request_dist == "uniform") {
     if (key_range_ == 0)
         key_range_ = record_count_ - 1;

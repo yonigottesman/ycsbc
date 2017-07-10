@@ -71,33 +71,33 @@ string histToStr(const vector<size_t>& histogram,
 
 string buildHistogram(const vector<double>& partMeans)
 {
-    auto minmax = minmax_element(partMeans.begin(), partMeans.end());
+    auto minmax = minmax_element(partMeans.begin(), partMeans.end()); //finds smallest and largest keys in partMeans
     double minVal = *minmax.first;
     double maxVal = *minmax.second;
     constexpr size_t BucketsNum = 10;
-    double bucketSize = (maxVal - minVal) / BucketsNum;
+    double bucketSize = (maxVal - minVal) / BucketsNum; //divides all means among 10 buckets
     vector<size_t> histogram(BucketsNum);
-    for (double m : partMeans)
+    for (double m : partMeans) //adds means to new histogram
     {
         size_t bucket = (m - minVal) / bucketSize;
         if (bucket == BucketsNum)
             --bucket;
         ++histogram[bucket];
     }
-    return histToStr(histogram, partMeans.size(), minVal, bucketSize);
+    return histToStr(histogram, partMeans.size(), minVal, bucketSize); //creates string for printing histogram
 }
 
 string buildOpsReport(const ycsbc::Client& client)
 {
 	stringstream ss;
 	ss << "Main thread statistics:\n";
-	for (int i = 0; i < ycsbc::OPS_NUM; ++i)
+	for (int i = 0; i < ycsbc::OPS_NUM; ++i) //for every kind of operation (insert, read, update, scan, rmw)
 	{
 		double totalMean;
 		vector<double> partMeans;
-		const ycsbc::Statistics& stats = client.getStats((ycsbc::Operation)i);
+		const ycsbc::Statistics& stats = client.getStats((ycsbc::Operation)i); //get rolling means (uses boost accumulator). Only seems to save 1 out of every 100 results.
 		stats.getMeans(totalMean, partMeans);
-		if (isnormal(totalMean))
+		if (isnormal(totalMean)) //Determines if the given floating point number arg is normal, i.e. is neither zero, subnormal, infinite, nor NaN.
 		{
 			string opName = ycsbc::OperationName((ycsbc::Operation)i);
 			ss << "Mean " << opName << " time (ms): " << totalMean << endl;
@@ -107,13 +107,13 @@ string buildOpsReport(const ycsbc::Client& client)
 //				ss << setprecision(2) << t << ", ";
 //			ss << "\n";
 		}
-		if (i == ycsbc::SCAN)
+		if (i == ycsbc::SCAN) //scan's means should take length of scan into account
 		{
 			double totalScanMean;
 			vector<double> partScanMeans;
-			const ycsbc::Statistics& scanStats = client.getScanStats();
+			const ycsbc::Statistics& scanStats = client.getScanStats(); //get rolling means (uses boost accumulator). Only seems to save 1 out of every 100 results.
 			scanStats.getMeans(totalScanMean, partScanMeans);
-			if (isnormal(totalScanMean))
+			if (isnormal(totalScanMean)) //Determines if the given floating point number arg is normal, i.e. is neither zero, subnormal, infinite, nor NaN.
 			{
 				ss << "Mean scan results: " << totalScanMean << endl;
 //				ss << "Partial scan results means: ";
@@ -125,12 +125,12 @@ string buildOpsReport(const ycsbc::Client& client)
 	    if (!partMeans.empty())
 	    {
             ss << "Histogram based on average latency per window: " << endl;
-            ss << buildHistogram(partMeans);
+            ss << buildHistogram(partMeans); //builds histogram with 10 buckets, returns printable string representing the histogram
 	    }
         const auto& hist = client.getHistogram((ycsbc::Operation)i);
         if (hist.getTotalOps() > 0)
         {
-            ss << "Histogram based on predefined time buckets: " << endl;
+            ss << "Histogram based on predefined time buckets: " << endl; //shows histogram built by client. Currently defined to consider results range 0.0-1.0, with 40 buckets.
             ss << histToStr(hist.getCounts(), hist.getTotalOps(), hist.getMinVal(), hist.getBucketRange());
         }
 	}
@@ -161,19 +161,34 @@ void reportProgress(size_t prog)
     time_t t = time(nullptr);
     auto tm = *localtime(&t);
     clog << prog << "% done @ " << put_time(&tm, "%d/%m/%Y %H:%M:%S") << endl;
+    cout << prog << "% done @ " << put_time(&tm, "%d/%m/%Y %H:%M:%S") << endl;
 }
 
+//void periodicProgress(std::atomic<bool>& stopFlag, std::atomic<size_t>& insertCtr, std::atomic<size_t>& transacCtr){
+//    while (!stopFlag){
+//
+//    }
+//}
+
+//threadOps - number of operations to be run by each thread.
 size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoading,
 		ycsbc::DB* db, ycsbc::CoreWorkload& wl, string& report,
 		exception_ptr& exceptionThrown)
 {
 	size_t oks = 0, bytesRead = 0, bytesWritten = 0;
-	const size_t reportRange = threadOps / 10;
-	ycsbc::SysStats beginStats = ycsbc::getSysStats();
+	const size_t reportRange = threadOps / 500; //the thread defined as master (thread 0) will report every 1/100th of the workload it completes.
+	ycsbc::SysStats beginStats = ycsbc::getSysStats(); //SysStats count writes to disk, writes in general, user/sys time, calls to read/write
+//	std::atomic<bool> stopFlag = false;
+//	std::atomic<size_t> insertCtr = 0;
+//	std::atomic<size_t> transacCtr = 0;
+
+//	std::async(periodicProgress(stopFlag, insertCtr, transacCtr));
+
+	//explanation on pragma omp parallel: https://www.ibm.com/support/knowledgecenter/en/SSGH2K_11.1.0/com.ibm.xlc111.aix.doc/compiler_ref/prag_omp_parallel.html
 #pragma omp parallel shared(db, wl, report, exceptionThrown) num_threads(threadsNum) \
 	reduction(+: oks) reduction(+: bytesRead) reduction(+: bytesWritten)
 	{
-		db->Init(); // per-thread initialization
+		db->Init(); // per-thread initialization (does nothing in either rocksdb or piwi. Empty implementation)
 		ycsbc::Client client(*db, wl, threadOps);
 		const bool isMaster = omp_get_thread_num() == 0;
 		for (size_t i = 0; i < threadOps; ++i)
@@ -184,12 +199,17 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
 		    try
 		    {
                 if (isLoading) {
+                	//calls the CoreGenerator created earlier and generates a key using Generator.next(). Calls the db's insert function to insert.
+                	//CoreWorkload::NextSequenceKey(),
+                	//counts bytes written
                     oks += client.DoInsert();
                 } else {
+                	//starts a timer, generates the next op from the core_workload, performs it, ends the timer
+                	//counts bytes written, adds timing results to stats and histogram (stats and histogram logging isn't thread safe)
                     oks += client.DoTransaction();
                 }
                 if ((i + 1) % reportRange == 0 && isMaster)
-                    reportProgress((i + 1) * 10 / reportRange);
+                    reportProgress((i + 1) * 500 / reportRange);
 		    }
 		    catch (...)
 		    {
@@ -199,13 +219,13 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
 		        break;
 		    }
 		}
-		db->Close(); // per-thread cleanup
+		db->Close(); // per-thread cleanup (empty for piwi and rocksdb)
 		if (!isLoading && isMaster)
-			report = buildOpsReport(client);
+			report = buildOpsReport(client); //histograms, latency
         bytesRead = client.getBytesRead();
         bytesWritten = client.getBytesWritten();
 	}
-	report += buildIoReport(bytesRead, bytesWritten, beginStats);
+	report += buildIoReport(bytesRead, bytesWritten, beginStats); //adds more specs to output
 	return oks;
 }
 
@@ -230,6 +250,9 @@ int main(const int argc, const char *argv[]) {
   utils::Properties props;
   string file_name = ParseCommandLine(argc, argv, props);
 
+  //create DB according to the -db flag received
+  //initializes db with necessary properties (e.g. for piwi chunk size, munk size,
+  //for rocksdb sets rocksdb::options).
   ycsbc::DB *db = ycsbc::DBFactory::CreateDB(props);
   if (!db) {
     cout << "Unknown database name " << props["dbname"] << endl;
@@ -238,6 +261,9 @@ int main(const int argc, const char *argv[]) {
   else
     cout << "Using DB client of type " << typeid(*db).name() << endl;
 
+  //initialize the Core Workload
+  //uses table name, key length, percentage of inserts/gets/updates,
+  //number of initial keys, key range, type of key generator (random, zipfian...)
   ycsbc::CoreWorkload wl;
   wl.Init(props);
 
@@ -247,6 +273,10 @@ int main(const int argc, const char *argv[]) {
 
   string statsReport;
   exception_ptr exceptionThrown{nullptr};
+
+  //initialization of db - run Ops to intialize.
+  //todo - add flag to enable timing in this phase.
+  //todo - see if can initialize sequentially/randomly and add timing.
   size_t oks = runOps(num_threads, init_ops / num_threads, true, db, wl, statsReport, exceptionThrown);
   cerr << "Loaded " << oks << " records, running workload..." << endl;
 
@@ -375,4 +405,5 @@ void UsageMessage(const char *command) {
 inline bool StrStartWith(const char *str, const char *pre) {
   return strncmp(str, pre, strlen(pre)) == 0;
 }
+
 

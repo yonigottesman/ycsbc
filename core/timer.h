@@ -29,7 +29,7 @@ class Timer {
 
  private:
   typedef std::chrono::high_resolution_clock Clock;
-  typedef std::chrono::duration<T> Duration;
+  typedef std::chrono::duration<T> Duration; //duration is in units of seconds.
 
   Clock::time_point time_;
 };
