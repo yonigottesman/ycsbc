@@ -47,6 +47,35 @@ int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const int num_ops,
   return oks;
 }
 
+
+string calculatePercentile(int percentile, const ycsbc::HistogramAccumulator& hist)
+{
+	float fPercentile = percentile/100.0;
+	size_t countPercentile=fPercentile*hist.getTotalOps();
+	const vector<size_t>& histArr = hist.getCounts();
+
+	size_t top = 0;
+	size_t bottom = 0;
+	size_t ctr = histArr[top];
+
+	//iterate until first bucket with at least countPercentile vals up to that bucket (inclusive)
+	while (ctr < countPercentile && top < histArr.size()-1){
+		if (histArr[top] != 0) //bottom should always point to a bucket containing values.
+			bottom = top;
+		top++;
+		ctr += histArr[top];
+	}
+
+	stringstream ss;
+	ss << "The " << percentile << " percentile is between " << endl;
+	ss << "    " << hist.getMinVal() + hist.getBucketRange() * bottom << "s (count " <<
+			ctr - histArr[top] << ", max latency " << hist.getMaxVals()[bottom] << ") and " << endl;
+	ss << "    " << hist.getMinVal() + hist.getBucketRange() * top << "s (count " <<
+			ctr << ", max latency " << hist.getMaxVals()[top] << ")" << endl;
+	ss << "Exact count for percentile " << percentile << " is " << countPercentile << "(out of " << histArr.size() <<")" << endl;
+	return ss.str();
+}
+
 string histToStr(const vector<size_t>& histogram,
         size_t totalVals, double minVal, double bucketSize)
 {
@@ -63,11 +92,13 @@ string histToStr(const vector<size_t>& histogram,
         size_t h = n;
         ss << setw(4) << setfill(' ') << setprecision(2)
                 << (minVal + bucketSize * b) << ": " << setfill(']') << setw(h)
-                << "] " << setfill(' ') << setw(maxHeight - h + 2) << " (" << n
-                << "%)" << endl;
+                << "] " << setfill(' ') << setw(2*maxHeight - h + 10) << " (" << n
+                << "%, ctr=" << histogram[b] << ")" << endl;
     }
     return ss.str();
 }
+
+
 
 string buildHistogram(const vector<double>& partMeans)
 {
@@ -126,12 +157,15 @@ string buildOpsReport(const ycsbc::Client& client)
 	    {
             ss << "Histogram based on average latency per window: " << endl;
             ss << buildHistogram(partMeans); //builds histogram with 10 buckets, returns printable string representing the histogram
-	    }
+        }
         const auto& hist = client.getHistogram((ycsbc::Operation)i);
         if (hist.getTotalOps() > 0)
         {
             ss << "Histogram based on predefined time buckets: " << endl; //shows histogram built by client. Currently defined to consider results range 0.0-1.0, with 40 buckets.
             ss << histToStr(hist.getCounts(), hist.getTotalOps(), hist.getMinVal(), hist.getBucketRange());
+            for (int i = 10; i <= 90; i+=10){
+            		ss << calculatePercentile(i,hist);
+            }
         }
 	}
 	return ss.str();
@@ -156,11 +190,13 @@ string buildIoReport(size_t bytesRead, size_t bytesWritten, const ycsbc::SysStat
     return ss.str();
 }
 
-void reportProgress(size_t prog)
+void reportProgress(float prog)
 {
     time_t t = time(nullptr);
     auto tm = *localtime(&t);
-    clog << prog << "% done @ " << put_time(&tm, "%d/%m/%Y %H:%M:%S") << endl;
+    stringstream ss;
+    ss << setprecision(4) << prog << "% done @ ";
+    	clog << ss.str() << put_time(&tm, "%d/%m/%Y %H:%M:%S") << endl;
  //   cout << prog << "% done @ " << put_time(&tm, "%d/%m/%Y %H:%M:%S") << endl;
 }
 
@@ -206,7 +242,7 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
                     oks += client.DoTransaction();
                 }
                 if ((i + 1) % reportRange == 0 && isMaster)
-                    reportProgress((i + 1) *100/ threadOps);
+                    reportProgress((i + 1) *100.0f/ (float)threadOps);
 		    }
 		    catch (...)
 		    {

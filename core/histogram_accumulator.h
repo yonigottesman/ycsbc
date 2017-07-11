@@ -17,6 +17,7 @@ namespace ycsbc
 class HistogramAccumulator
 {
     std::vector<size_t> counts;
+    std::vector<double> maxVals;
     size_t totalOps;
     const double minVal;
     const double maxVal;
@@ -28,6 +29,10 @@ public:
     const std::vector<size_t>& getCounts() const {
         return counts;
     }
+    const std::vector<double>& getMaxVals() const {
+    		return maxVals;
+    }
+
     size_t getTotalOps() const {
         return totalOps;
     }

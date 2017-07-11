@@ -24,7 +24,7 @@ public:
 	Client(DB &db, CoreWorkload &wl, size_t opsNum) :
 			db_(db), workload_(wl),
 			stats(OPS_NUM, Statistics(opsNum)), scanStats(opsNum),
-			histograms(OPS_NUM, HistogramAccumulator(0.0, 2.0, 20000))
+			histograms(OPS_NUM, HistogramAccumulator(0.0, 2.5, 20000))
 			// note: opsNum refer to all ops, while stats are gathered separately.
 			// depending on the mix, the actual number of events passed to a stats
 			// object can be much smaller than the declared.

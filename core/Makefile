@@ -1,6 +1,7 @@
 CXX=g++
 OPT=-O3 -DNDEBUG
-CXXFLAGS=$(OPT) -std=c++11 -c -g -Wall
+BOOST_DIR=/usr/local/boost_1_61_0
+CXXFLAGS=$(OPT) -std=c++11 -c -g -Wall -I ${BOOST_DIR}
 SOURCES=$(wildcard *.cc)
 OBJECTS=$(SOURCES:.cc=.o)
 
