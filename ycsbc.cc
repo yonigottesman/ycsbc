@@ -67,12 +67,11 @@ string calculatePercentile(int percentile, const ycsbc::HistogramAccumulator& hi
 	}
 
 	stringstream ss;
-	ss << "The " << percentile << " percentile is between " << endl;
-	ss << "    " << hist.getMinVal() + hist.getBucketRange() * bottom << "s (count " <<
-			ctr - histArr[top] << ", max latency " << hist.getMaxVals()[bottom] << ") and " << endl;
-	ss << "    " << hist.getMinVal() + hist.getBucketRange() * top << "s (count " <<
-			ctr << ", max latency " << hist.getMaxVals()[top] << ")" << endl;
-	ss << "Exact count for percentile " << percentile << " is " << countPercentile << "(out of " << histArr.size() <<")" << endl;
+	ss << "Data elements collected: " << hist.getTotalOps() << endl;
+	ss << percentile << " percentile in: [" << hist.getMinVal() + hist.getBucketRange() * bottom << "s (count ";
+	ss << ctr - histArr[top] << ", max lat: " << hist.getMaxVals()[bottom] << ") , " ;
+	ss << hist.getMinVal() + hist.getBucketRange() * top << "s (count " << ctr << ", max lat: " << hist.getMaxVals()[top] << ")]" << endl;
+	ss << "Exact count for percentile " << percentile << " is " << countPercentile << endl;
 	return ss.str();
 }
 
@@ -162,7 +161,7 @@ string buildOpsReport(const ycsbc::Client& client)
         if (hist.getTotalOps() > 0)
         {
             ss << "Histogram based on predefined time buckets: " << endl; //shows histogram built by client. Currently defined to consider results range 0.0-1.0, with 40 buckets.
-            ss << histToStr(hist.getCounts(), hist.getTotalOps(), hist.getMinVal(), hist.getBucketRange());
+        //    ss << histToStr(hist.getCounts(), hist.getTotalOps(), hist.getMinVal(), hist.getBucketRange());
             for (int i = 10; i <= 90; i+=10){
             		ss << calculatePercentile(i,hist);
             }
@@ -196,7 +195,7 @@ void reportProgress(float prog)
     auto tm = *localtime(&t);
     stringstream ss;
     ss << setprecision(4) << prog << "% done @ ";
-    	clog << ss.str() << put_time(&tm, "%d/%m/%Y %H:%M:%S") << endl;
+    	std::cout << ss.str() << put_time(&tm, "%d/%m/%Y %H:%M:%S") << std::endl;
  //   cout << prog << "% done @ " << put_time(&tm, "%d/%m/%Y %H:%M:%S") << endl;
 }
 
@@ -212,7 +211,7 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
 		exception_ptr& exceptionThrown)
 {
 	size_t oks = 0, bytesRead = 0, bytesWritten = 0;
-	const size_t reportRange = threadOps / 500; //the thread defined as master (thread 0) will report every 1/100th of the workload it completes.
+	const size_t reportRange = threadOps / 200; //the thread defined as master (thread 0) will report every 1/100th of the workload it completes.
 	ycsbc::SysStats beginStats = ycsbc::getSysStats(); //SysStats count writes to disk, writes in general, user/sys time, calls to read/write
 //	ycsbc::Client* clients = new ycsbc::Client*[threadsNum];
 

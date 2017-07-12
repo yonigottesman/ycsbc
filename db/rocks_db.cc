@@ -28,6 +28,14 @@ const string UseFsync = "rocksdb_usefsync";
 const string SyncWrites = "rocksdb_syncwrites";
 const string CacheSize = "rocksdb_cachesize";
 const string Compression = "compression";
+const string WriteBufferSize = "write_buffer_size";
+const string MaxWriteBufferNumber = "max_write_buffer_number";
+const string MinWriteBufferToMerge = "min_write_buffer_number_to_merge";
+
+const size_t defaultWriteBufferSize = 256*1024*1024;
+const int defaultMaxWriteBufferNumber = 5;
+const int defaultMinWriteBufferToMerge = 2;
+
 
 bool useFsync(const map<string, string>& props)
 {
@@ -52,6 +60,32 @@ size_t blockCacheSize(const map<string, string>& props)
         return 0;
     return stoll(iter->second);
 }
+
+size_t writeBufferSize(const map<string, string>& props)
+{
+    auto iter = props.find(WriteBufferSize);
+    if (iter == props.end())
+        return defaultWriteBufferSize;
+    return stoll(iter->second);
+}
+
+int maxWriteBufferNumber(const map<string, string>& props)
+{
+    auto iter = props.find(MaxWriteBufferNumber);
+    if (iter == props.end())
+        return defaultMaxWriteBufferNumber;
+    return stoi(iter->second);
+}
+
+int minWriteBufferToMerge(const map<string, string>& props)
+{
+    auto iter = props.find(MinWriteBufferToMerge);
+    if (iter == props.end())
+        return defaultMinWriteBufferToMerge;
+    return stoi(iter->second);
+}
+
+
 
 void setCacheBlockSize(const map<string, string>& props, rocksdb::Options& options)
 {
@@ -88,7 +122,6 @@ void setCompression(const map<string, string>& props, rocksdb::Options& options)
     fill(options.compression_per_level.begin(), options.compression_per_level.end(), compression);
 }
 
-
 } // namespace
 
 RocksDB::RocksDB(const map<string, string>& props, const string& dbDir)
@@ -108,6 +141,13 @@ RocksDB::RocksDB(const map<string, string>& props, const string& dbDir)
 
 	setCacheBlockSize(props, options);
     setCompression(props, options);
+
+    options.write_buffer_size = writeBufferSize(props);
+    options.max_write_buffer_number = maxWriteBufferNumber(props);
+    options.min_write_buffer_number_to_merge = minWriteBufferToMerge(props);
+//    cout << "write buffer size: " << options.write_buffer_size << endl;
+//   cout << "max write buffers: " << options.max_write_buffer_number << endl;
+//    cout << "min write buffer to merge: " << options.min_write_buffer_number_to_merge <<endl;
 
 	// open DB
 	verifyDirExists(dbDir + DBPath);
