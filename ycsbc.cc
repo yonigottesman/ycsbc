@@ -24,6 +24,7 @@
 #include "core/client.h"
 #include "core/core_workload.h"
 #include "db/db_factory.h"
+#include "core/myDebug.h"
 
 using namespace std;
 
@@ -48,6 +49,19 @@ int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const int num_ops,
 }
 
 
+string printProperties(utils::Properties& props){
+	stringstream ss;
+
+	auto iter = props.properties().begin();
+	while (iter != props.properties().end()){
+		ss << iter->first << " = " << iter->second << endl;
+		iter ++;
+	}
+
+	return ss.str();
+}
+
+
 string calculatePercentile(int percentile, const ycsbc::HistogramAccumulator& hist)
 {
 	float fPercentile = percentile/100.0;
@@ -68,9 +82,9 @@ string calculatePercentile(int percentile, const ycsbc::HistogramAccumulator& hi
 
 	stringstream ss;
 	ss << "Data elements collected: " << hist.getTotalOps() << endl;
-	ss << percentile << " percentile in: [" << hist.getMinVal() + hist.getBucketRange() * bottom << "s (count ";
-	ss << ctr - histArr[top] << ", max lat: " << hist.getMaxVals()[bottom] << ") , " ;
-	ss << hist.getMinVal() + hist.getBucketRange() * top << "s (count " << ctr << ", max lat: " << hist.getMaxVals()[top] << ")]" << endl;
+	ss << percentile << " percentile in: [" << hist.getMinVal() + hist.getBucketRange() * bottom << "s (ctr=";
+	ss << ctr - histArr[top] << ", max=:" << hist.getMaxVals()[bottom] << ") , " ;
+	ss << hist.getMinVal() + hist.getBucketRange() * top << "s (ctr=" << ctr << ", max=" << hist.getMaxVals()[top] << ")]" << endl;
 	ss << "Exact count for percentile " << percentile << " is " << countPercentile << endl;
 	return ss.str();
 }
@@ -165,6 +179,7 @@ string buildOpsReport(const ycsbc::Client& client)
             for (int i = 10; i <= 90; i+=10){
             		ss << calculatePercentile(i,hist);
             }
+            ss <<endl;
         }
 	}
 	return ss.str();
@@ -239,6 +254,8 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
                 	//starts a timer, generates the next op from the core_workload, performs it, ends the timer
                 	//counts bytes written, adds timing results to stats and histogram (stats and histogram logging isn't thread safe)
                     oks += client.DoTransaction();
+
+                    DEB(cout <<i << " ins tid " << omp_get_thread_num() << endl;)
                 }
                 if ((i + 1) % reportRange == 0 && isMaster)
                     reportProgress((i + 1) *100.0f/ (float)threadOps);
@@ -282,6 +299,12 @@ string durToTime(double usDuration)
 int main(const int argc, const char *argv[]) {
   utils::Properties props;
   string file_name = ParseCommandLine(argc, argv, props);
+
+GDB(
+  int in;
+  cout << "press any key: ";
+  std::cin >> in;
+  cout << endl;)
 
   //create DB according to the -db flag received
   //initializes db with necessary properties (e.g. for piwi chunk size, munk size,
@@ -407,6 +430,9 @@ string ParseCommandLine(int argc, const char *argv[], utils::Properties &props) 
 	}
 	cout << "Given command line args: " << cmdline.str() << endl;
 
+	cout << "All properties received:" << endl;
+	cout <<printProperties(props) << endl;
+
 	if (argindex == 1 || argindex != argc)
 	{
 		UsageMessage(argv[0]);
@@ -432,6 +458,7 @@ void UsageMessage(const char *command) {
   cout << "  -rocksdb_usefsync: synchronize file metadata on every sync (default: false)" << endl;
   cout << "  -rocksdb_syncwrites: disable OS buffering and synchronize every file write (default: false)" << endl;
   cout << "  -rocksdb_shards: the number of RocksDB instances to use (default: 1)" << endl;
+
 }
 
 inline bool StrStartWith(const char *str, const char *pre) {

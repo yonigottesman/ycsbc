@@ -22,6 +22,7 @@ class RocksDB : public DB
 	rocksdb::DB* db;
 	rocksdb::WriteOptions wo;
 	rocksdb::ReadOptions ro;
+	//std::shared_ptr<rocksdb::Statistics> statsPtr;
 public:
 	RocksDB(const std::map<std::string, std::string>& props, const std::string& dbDir);
 	~RocksDB();

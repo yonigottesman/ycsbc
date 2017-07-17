@@ -31,11 +31,14 @@ const string Compression = "compression";
 const string WriteBufferSize = "write_buffer_size";
 const string MaxWriteBufferNumber = "max_write_buffer_number";
 const string MinWriteBufferToMerge = "min_write_buffer_number_to_merge";
+const string statistics = "statistics";
+const string StatsDumpPeriod = "stats_dump_period_sec";
 
 const size_t defaultWriteBufferSize = 256*1024*1024;
 const int defaultMaxWriteBufferNumber = 5;
 const int defaultMinWriteBufferToMerge = 2;
-
+const std::shared_ptr<rocksdb::Statistics> defaultStatistics = nullptr;
+const unsigned int defaultStatsDumpTime = 3600; //one hour
 
 bool useFsync(const map<string, string>& props)
 {
@@ -85,6 +88,13 @@ int minWriteBufferToMerge(const map<string, string>& props)
     return stoi(iter->second);
 }
 
+unsigned int statsDumpPeriod(const map<string, string>& props)
+{
+    auto iter = props.find(StatsDumpPeriod);
+    if (iter == props.end())
+        return defaultStatsDumpTime;
+    return stoul(iter->second);
+}
 
 
 void setCacheBlockSize(const map<string, string>& props, rocksdb::Options& options)
@@ -98,6 +108,25 @@ void setCacheBlockSize(const map<string, string>& props, rocksdb::Options& optio
     options.table_factory.reset(new rocksdb::BlockBasedTableFactory(table_options));
 }
 
+void setStatistics(const map<string, string>& props, rocksdb::Options& options)
+{
+    auto iter = props.find(statistics);
+    if (iter == props.end()){
+        options.statistics = defaultStatistics;
+    }
+    else{
+    		string stat = iter->second;
+    		transform(stat.begin(), stat.end(), stat.begin(), [](char c) { return tolower(c); });
+    		if (stat == "off" || stat == "no" || stat == "false" ||  stat == "0"){
+    			options.statistics = defaultStatistics;
+    		}
+    		if (stat == "on" || stat == "yes" || stat == "true" || stat == "1"){
+    			options.statistics = rocksdb::CreateDBStatistics();
+    		}
+    }
+  //  return options.statistics;
+}
+
 rocksdb::CompressionType doCompress(const map<string, string>& props,
         rocksdb::CompressionType defaultCompress)
 {
@@ -106,9 +135,9 @@ rocksdb::CompressionType doCompress(const map<string, string>& props,
         return defaultCompress;
     string comp = iter->second;
     transform(comp.begin(), comp.end(), comp.begin(), [](char c) { return tolower(c); });
-    if (comp == "off" || comp == "no" || comp == "false")
+    if (comp == "off" || comp == "no" || comp == "false" || comp == "0")
         return rocksdb::kNoCompression;
-    if (comp == "on" || comp == "yes" || comp == "true")
+    if (comp == "on" || comp == "yes" || comp == "true" || comp == "1")
         return rocksdb::kSnappyCompression;
     return defaultCompress;
 }
@@ -145,9 +174,8 @@ RocksDB::RocksDB(const map<string, string>& props, const string& dbDir)
     options.write_buffer_size = writeBufferSize(props);
     options.max_write_buffer_number = maxWriteBufferNumber(props);
     options.min_write_buffer_number_to_merge = minWriteBufferToMerge(props);
-//    cout << "write buffer size: " << options.write_buffer_size << endl;
-//   cout << "max write buffers: " << options.max_write_buffer_number << endl;
-//    cout << "min write buffer to merge: " << options.min_write_buffer_number_to_merge <<endl;
+    setStatistics(props, options);
+    options.stats_dump_period_sec = statsDumpPeriod(props);
 
 	// open DB
 	verifyDirExists(dbDir + DBPath);
@@ -157,10 +185,30 @@ RocksDB::RocksDB(const map<string, string>& props, const string& dbDir)
 		cerr << "RocksDB DB could not be opened: " << s.ToString() << endl;
 		assert(false);
 	}
+
 }
 
 RocksDB::~RocksDB()
 {
+	rocksdb::Options options = db->GetOptions();
+	if (options.statistics != nullptr){
+		std::cout << std::endl << "RocksDB Statistics:" << std::endl;
+		std::cout << options.statistics->ToString();
+		std::cout << std::endl << "Histogram DB Gets:" <<std::endl;
+		std::cout << options.statistics->getHistogramString(rocksdb::DB_GET) << std::endl;
+		std::cout << std::endl << "Histogram DB Writes:" <<std::endl;
+		std::cout << options.statistics->getHistogramString(rocksdb::DB_WRITE) << std::endl;
+		std::cout << std::endl << "Histogram Compaction Time:" <<std::endl;
+		std::cout << options.statistics->getHistogramString(rocksdb::COMPACTION_TIME) << std::endl;
+		std::cout << std::endl << "Histogram Compaction Outfile Sync Micros" << std::endl;
+		std::cout << options.statistics->getHistogramString(rocksdb::COMPACTION_OUTFILE_SYNC_MICROS) << std::endl;
+		std::cout << std::endl << "Histogram Stall Memtable Compaction Count:" << std::endl;
+		std::cout << options.statistics->getHistogramString(rocksdb::STALL_MEMTABLE_COMPACTION_COUNT) << std::endl;
+
+	}
+	else {
+		std::cout << "Statistics printout is off" << std::endl;
+	}
 	delete db;
 }
 

@@ -1,6 +1,6 @@
 CXX        = g++
 OPT        = -O3 -DNDEBUG
-CXXFLAGS   = -std=c++11 -g $(OPT) -Wall -pthread -I./
+CXXFLAGS   = -std=c++11 -g $(OPT) -Wall -pthread -I/usr/local/boost_1_61_0 -I./
 LIBPIWI    = -Wl,-rpath,'../piwi' -L../piwi
 ROCKSDB_SO = librocksdb.so
 
@@ -20,7 +20,7 @@ SUBSRCS    = $(wildcard core/*.cc) $(wildcard db/*.cc)
 OBJECTS    = $(SUBSRCS:.cc=.o)
 EXEC       = ycsbc
 
-LD_LIBRARY_PATH = /usr/lib/x86_64-linux-gnu
+#LD_LIBRARY_PATH = /usr/lib/x86_64-linux-gnu
 
 OS := $(shell uname)
 ifeq ($(OS),Darwin)
