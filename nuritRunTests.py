@@ -6,6 +6,7 @@ from subprocess import Popen
 import re
 import datetime
 import os
+import shutil
 try:
   from cStringIO import StringIO
 except ImportError:
@@ -48,6 +49,9 @@ def getThroughput(name):
     tpPerc70 = re.compile(r'70 percentile in') 
     tpPerc80 = re.compile(r'80 percentile in') 
     tpPerc90 = re.compile(r'90 percentile in') 
+    tpPerc95 = re.compile(r'95 percentile in')
+    tpPerc98 = re.compile(r'98 percentile in')
+    tpPerc99 = re.compile(r'99 percentile in')
     tpPercRe = re.compile(r'\[.*\]')
     throughput = "0"
     insLat = "0"
@@ -63,6 +67,9 @@ def getThroughput(name):
     perc70 = ' '
     perc80 = ' '
     perc90 = ' '
+    perc95 = ' '
+    perc98 = ' '
+    perc99 = ' '
     with open(logName) as file:
         for line in file:
             tpline = tpLineRe.search(line)
@@ -120,18 +127,37 @@ def getThroughput(name):
                                                                 scanline = tpPerc90.search(line)
                                                                 if scanline != None:
                                                                     perc90 = tpPercRe.search(line).group()
+                                                                else:
+                                                                    scanline = tpPerc95.search(line)
+                                                                    if scanline != None:
+                                                                        perc95 = tpPercRe.search(line).group()
+                                                                    else:
+                                                                        scanline = tpPerc98.search(line)
+                                                                        if scanline != None:
+                                                                            perc98 = tpPercRe.search(line).group()
+                                                                        else:
+                                                                            scanline = tpPerc98.search(line)
+                                                                            if scanline != None:
+                                                                                perc99 = tpPercRe.search(line).group()
+ 
                           
-    return (throughput, insLat, updLat, getLat, scanLat, perc10, perc20, perc30, perc40, perc50, perc60, perc70, perc80, perc90)
+    return (throughput, insLat, updLat, getLat, scanLat, perc10, perc20, perc30, perc40, perc50, perc60, perc70, perc80, perc90, perc95, perc98, perc99)
 
 def recordRun(name):
-    (throughput, insLat, updLat, getLat, scanLat, perc10, perc20, perc30, perc40, perc50, perc60, perc70, perc80, perc90) = getThroughput(name)
+    (throughput, insLat, updLat, getLat, scanLat, perc10, perc20, perc30, perc40, perc50, perc60, perc70, perc80, perc90, perc95, perc98, perc99) = getThroughput(name)
     resultsLock.acquire()
     try:
         f = open(resultsFile, 'a')
-        f.write(name.replace('+', '\t') + '\t' + throughput + '\t' + insLat + '\t' + updLat + '\t' + getLat + '\t' + scanLat + '\t' + perc10 + '\t' + perc20 + '\t' + perc30 + '\t' + perc40 + '\t' + perc50 + '\t' + perc60 + '\t' + perc70 + '\t' + perc80 + '\t' + perc90 + '\n')
+        f.write(name.replace('+', '\t') + '\t' + throughput + '\t' + insLat + '\t' + updLat + '\t' + getLat + '\t' + scanLat + '\t' + perc10 + '\t' + perc20 + '\t' + perc30 + '\t' + perc40 + '\t' + perc50 + '\t' + perc60 + '\t' + perc70 + '\t' + perc80 + '\t' + perc90 + '\t' + perc95 + '\t' +  perc98 + '\t' + perc99 + '\n')
         f.close()
+        
+        print('name is ' + name + ' name.find is ')
+        if name.find('rocks') != -1:
+            shutil.copyfile('data_rocksdb/LOG', resultsDir+name + '+LOG')
+            #shutil.copyfile('data_rocksdb/OPTIONS*', resultsFile + '+OPTIONS')
+            
     except Exception as ex:
-        print('*** unable to record {0} result: {1} ticks ***'.format(name, ticks))
+        print('*** unable to record {0}  ***'.format(name))
         print('*** reason: {0} ***'.format(str(ex)))
     resultsLock.release()
 
@@ -193,11 +219,16 @@ threadsNum = ['12']
 commonOps = ''
 piwi_commonOps = ''
 piwi_options = ['-munkBytesCapacity 196608 -maxMunks 200 -writeBufBytesCapacity 524288']
-rocks_options = ['-rocksdb_cachesize 8140000000','-rocksdb_cachesize 8140000000 -statistics yes']
-
-################ read only #############
+rocks_options = ['-rocksdb_cachesize 8140000000', '-rocksdb_cachesize 8140000000 -statistics yes -stats_dump_period_sec 600']
 keyrange = '15000000'
-workloads = ['gets_only']
+
+
+
+
+
+################ big munks (128MB) and small munks (64KB)  #############
+workloads = ['puts_gets','gets_only']
+piwi_options = ['-munkBytesCapacity 5162220 -maxMunks 10 -writeBufBytesCapacity 524288 -initChunks 200', '-munkBytesCapacity 2560 -maxMunks 16384 -writeBufBytesCapacity 524288 -initChunks 400000']
 initsNum = [keyrange]
 opersNum = ['60100000']
 distribution = ['zipfian', 'flurry']
@@ -214,84 +245,11 @@ for workload in workloads:
                             print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
                             popenAndCall(bench, workload, inits, opers, dist, threads, opt)
 
-############### mixes #############
-workloads = ['puts_gets']#, 'puts_gets_scans']
-initsNum = [keyrange]
-opersNum = ['60100000']
-distribution = ['zipfian', 'flurry']
 
-for workload in workloads:
-    for bench in benchmarks:
-        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
-        for inits in initsNum:
-            for opers in opersNum:
-                for threads in threadsNum:
-                    for dist in distribution:
-                        opts = (piwi_options if bench == 'piwi' else rocks_options)
-                        for opt in opts:
-                            opt = opt + ' ' + commonOps
-                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
-                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
 
-############### puts only #############
 workloads = ['puts_only']
-initsNum = ['0']
-opersNum = ['60100000']
-distribution = ['flurry']
-
-for workload in workloads:
-    for bench in benchmarks:
-        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
-        for inits in initsNum:
-            for opers in opersNum:
-                for threads in threadsNum:
-                    for dist in distribution:
-                        opts = (piwi_options if bench == 'piwi' else rocks_options)
-                        for opt in opts:
-                            opt = opt + ' ' + commonOps
-                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
-                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
-
-############### read only #############
-#workloads = ['rand_reads']
-#initsNum = ['10000000']
-#opersNum = ['300000000']
-
-#for bench in benchmarks:
-#    for workload in workloads:
-#        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
-#        for inits in initsNum:
-#            for opers in opersNum:
-#                for threads in threadsNum:
-#                    opts = (piwi_options if bench == 'piwi' else rocks_options)
-#                    for opt in opts:
-#                        opt = opt + ' ' + commonOps
-#                        print('\tinits: ' + inits + ', operations: ' + opers + ', threads: ' + threads + ', ops: ' + opt)
-#                        popenAndCall(bench, workload, inits, opers, threads, opt)
-
-############### scans only #############
-#workloads = ['scans_only']
-#initsNum = ['10000000']
-#opersNum = ['1000']
-
-#for bench in benchmarks:
-#    for workload in workloads:
-#        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
-#        for inits in initsNum:
-#            for opers in opersNum:
-#                for threads in threadsNum:
-#                    opts = (piwi_options if bench == 'piwi' else rocks_options)
-#                    for opt in opts:
-#                        opt = opt + ' ' + commonOps
-#                        print('\tinits: ' + inits + ', operations: ' + opers + ', threads: ' + threads + ', ops: ' + opt)
-#                        popenAndCall(bench, workload, inits, opers, threads, opt)
-
-################ read only #############
-
-threadsNum = ['8']
-keyrange = '15000000'
-workloads = ['gets_only']
-initsNum = [keyrange]
+piwi_options = ['-munkBytesCapacity 5162220 -maxMunks 10 -writeBufBytesCapacity 524288 -initChunks 200', '-munkBytesCapacity 2560 -maxMunks 16384 -writeBufBytesCapacity 524288 -initChunks 400000']
+initsNum = [0]
 opersNum = ['60100000']
 distribution = ['zipfian', 'flurry']
 for workload in workloads:
@@ -307,19 +265,20 @@ for workload in workloads:
                             print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
                             popenAndCall(bench, workload, inits, opers, dist, threads, opt)
 
-############### mixes #############
-workloads = ['puts_gets']#, 'puts_gets_scans']
+############### scan #############
+workloads = ['scans_only', 'puts_scans']
 initsNum = [keyrange]
 opersNum = ['60100000']
 distribution = ['zipfian', 'flurry']
+piwi_options = ['-munkBytesCapacity 196608 -maxMunks 200 -writeBufBytesCapacity 524288']
 
 for workload in workloads:
     for bench in benchmarks:
         print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
         for inits in initsNum:
             for opers in opersNum:
-                for threads in threadsNum:
-                    for dist in distribution:
+                for dist in distribution:
+                    for threads in threadsNum:
                         opts = (piwi_options if bench == 'piwi' else rocks_options)
                         for opt in opts:
                             opt = opt + ' ' + commonOps
@@ -327,23 +286,111 @@ for workload in workloads:
                             popenAndCall(bench, workload, inits, opers, dist, threads, opt)
 
 ############### puts only #############
-workloads = ['puts_only']
-initsNum = ['0']
-opersNum = ['60100000']
-distribution = ['zipfian','flurry']
+#workloads = ['puts_only']
+#initsNum = ['0']
+#opersNum = ['60100000']
+#distribution = ['flurry']
 
-for workload in workloads:
-    for bench in benchmarks:
-        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
-        for inits in initsNum:
-            for opers in opersNum:
-                for threads in threadsNum:
-                    for dist in distribution:
-                        opts = (piwi_options if bench == 'piwi' else rocks_options)
-                        for opt in opts:
-                            opt = opt + ' ' + commonOps
-                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
-                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
+#for workload in workloads:
+#    for bench in benchmarks:
+#        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
+#        for inits in initsNum:
+#            for opers in opersNum:
+#                for threads in threadsNum:
+#                    for dist in distribution:
+#                        opts = (piwi_options if bench == 'piwi' else rocks_options)
+#                        for opt in opts:
+#                            opt = opt + ' ' + commonOps
+#                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
+#                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
+
+#############zipfian with half munk size #######################
+#threadsNum = ['12']
+#workloads = ['puts_gets', 'gets_only']
+#initsNum = [keyrange]
+#opersNum = ['60100000']
+#distribution = ['zipfian']
+#piwi_options = ['-munkBytesCapacity 98304 -maxMunks 400 -writeBufBytesCapacity 524288 -initChunks 10100']
+#benchmarks = ['piwi']
+
+#for workload in workloads:
+#    for bench in benchmarks:
+#        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
+#        for inits in initsNum:
+#            for opers in opersNum:
+#                for threads in threadsNum:
+#                    for dist in distribution:
+#                        opts = (piwi_options if bench == 'piwi' else rocks_options)
+#                        for opt in opts:
+#                            opt = opt + ' ' + commonOps
+#                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
+#                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
+
+
+#threadsNum = ['12']
+#workloads = ['puts_only']
+#initsNum = ['0']
+#opersNum = ['60100000']
+#distribution = ['zipfian']
+#piwi_options = ['-munkBytesCapacity 98304 -maxMunks 400 -writeBufBytesCapacity 524288 -initChunks 10100']
+#benchmarks = ['piwi']
+
+#for workload in workloads:
+#    for bench in benchmarks:
+#        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
+#        for inits in initsNum:
+#            for opers in opersNum:
+#                for threads in threadsNum:
+#                    for dist in distribution:
+#                        opts = (piwi_options if bench == 'piwi' else rocks_options)
+#                        for opt in opts:
+#                            opt = opt + ' ' + commonOps
+#                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
+#                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
+
+#############flurry with double munk size #######################
+#threadsNum = ['12']
+#workloads = ['puts_gets', 'gets_only']
+#initsNum = [keyrange]
+#opersNum = ['60100000']
+#distribution = ['flurry']
+#piwi_options = ['-munkBytesCapacity 393216 -maxMunks 100 -writeBufBytesCapacity 524288 -initChunks 3000']
+#benchmarks = ['piwi']
+
+#for workload in workloads:
+#    for bench in benchmarks:
+#        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
+#        for inits in initsNum:
+#            for opers in opersNum:
+#                for threads in threadsNum:
+#                    for dist in distribution:
+#                        opts = (piwi_options if bench == 'piwi' else rocks_options)
+#                        for opt in opts:
+#                            opt = opt + ' ' + commonOps
+#                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
+#                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
+
+
+#threadsNum = ['12']
+#workloads = ['puts_only']
+#initsNum = ['0']
+#opersNum = ['60100000']
+#distribution = ['flurry']
+#piwi_options = ['-munkBytesCapacity 393216 -maxMunks 100 -writeBufBytesCapacity 524288 -initChunks 3000']
+#benchmarks = ['rocks']
+
+#for workload in workloads:
+#    for bench in benchmarks:
+#        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
+#        for inits in initsNum:
+#            for opers in opersNum:
+#                for threads in threadsNum:
+#                    for dist in distribution:
+#                        opts = (piwi_options if bench == 'piwi' else rocks_options)
+#                        for opt in opts:
+#                            opt = opt + ' ' + commonOps
+#                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
+#                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
 
 
 print('All done! @ {0}'.format(nowStr()))
