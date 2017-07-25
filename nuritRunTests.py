@@ -136,7 +136,7 @@ def getThroughput(name):
                                                                         if scanline != None:
                                                                             perc98 = tpPercRe.search(line).group()
                                                                         else:
-                                                                            scanline = tpPerc98.search(line)
+                                                                            scanline = tpPerc99.search(line)
                                                                             if scanline != None:
                                                                                 perc99 = tpPercRe.search(line).group()
  
@@ -211,27 +211,34 @@ if not os.path.exists(resultsDir):
     os.makedirs(resultsDir)
 
 f = open(resultsFile, 'a')
-f.write('benchmark\tworkload\tinitNum\topersNum\tthreadsNum\trun_options\tops_per_sec\tinsLat\tupdLat\tgetLat\tscanLat\tpercentile10\tpercentile20\tpercentile30\tpercentile40\tpercentile50\tpercentile60\tpercentile70\tpercentile80\tpercentile90\n')
+f.write('benchmark\tworkload\tinitNum\topersNum\tthreadsNum\trun_options\tops_per_sec\tinsLat\tupdLat\tgetLat\tscanLat\tpercentile10\tpercentile20\tpercentile30\tpercentile40\tpercentile50\tpercentile60\tpercentile70\tpercentile80\tpercentile90\tpercentile95\tpercentile98\tpercentile99\n')
 f.close()
+
+
+
+
+
+
+
 
 benchmarks = ['piwi', 'rocks']
 threadsNum = ['12']
 commonOps = ''
 piwi_commonOps = ''
-piwi_options = ['-munkBytesCapacity 196608 -maxMunks 200 -writeBufBytesCapacity 524288']
-rocks_options = ['-rocksdb_cachesize 8140000000', '-rocksdb_cachesize 8140000000 -statistics yes -stats_dump_period_sec 600']
+piwi_options = ['-munkBytesCapacity 196608 -maxMunks 400 -writeBufBytesCapacity 524288']
+rocks_options = ['-rocksdb_cachesize 1073741824']#, '-rocksdb_cachesize 1073741824 -statistics yes -stats_dump_period_sec 600']
 keyrange = '15000000'
 
 
 
 
 
-################ big munks (128MB) and small munks (64KB)  #############
-workloads = ['puts_gets','gets_only']
-piwi_options = ['-munkBytesCapacity 5162220 -maxMunks 10 -writeBufBytesCapacity 524288 -initChunks 200', '-munkBytesCapacity 2560 -maxMunks 16384 -writeBufBytesCapacity 524288 -initChunks 400000']
-initsNum = [keyrange]
+################ puts, gets, puts-gets giving rocksdb smaller cache  #############
+workloads = ['puts_only']
+initsNum = ['0']
 opersNum = ['60100000']
 distribution = ['zipfian', 'flurry']
+
 for workload in workloads:
     for bench in benchmarks:
         print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
@@ -247,9 +254,33 @@ for workload in workloads:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+benchmarks = ['piwi', 'rocks']
+threadsNum = ['12']
+commonOps = ''
+piwi_commonOps = ''
+piwi_options = ['-munkBytesCapacity 196608 -maxMunks 200 -writeBufBytesCapacity 524288']
+rocks_options = ['-rocksdb_cachesize 8140000000', '-rocksdb_cachesize 8140000000 -statistics yes -stats_dump_period_sec 600']
+keyrange = '15000000'
+
+
+
+
+
+################ big munks (128MB) and small munks (64KB)  #############
 workloads = ['puts_only']
 piwi_options = ['-munkBytesCapacity 5162220 -maxMunks 10 -writeBufBytesCapacity 524288 -initChunks 200', '-munkBytesCapacity 2560 -maxMunks 16384 -writeBufBytesCapacity 524288 -initChunks 400000']
-initsNum = [0]
+initsNum = ['0']
 opersNum = ['60100000']
 distribution = ['zipfian', 'flurry']
 for workload in workloads:
