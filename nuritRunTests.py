@@ -225,12 +225,65 @@ benchmarks = ['piwi', 'rocks']
 threadsNum = ['12']
 commonOps = ''
 piwi_commonOps = ''
-piwi_options = ['-munkBytesCapacity 196608 -maxMunks 400 -writeBufBytesCapacity 524288']
-rocks_options = ['-rocksdb_cachesize 1073741824']#, '-rocksdb_cachesize 1073741824 -statistics yes -stats_dump_period_sec 600']
+piwi_options = ['-munkBytesCapacity 196608 -maxMunks 400 -writeBufBytesCapacity 524288', '-munkBytesCapacity 196608 -maxMunks 200 -writeBufBytesCapacity 524288']
+rocks_options = ['-rocksdb_cachesize 1073741824']
 keyrange = '15000000'
 
 
 
+
+
+############### puts, gets, puts-gets giving rocksdb smaller cache  #############
+workloads = ['puts_only']
+initsNum = ['0']
+opersNum = ['60100000']
+distribution = ['zipfian', 'flurry']
+
+for workload in workloads:
+    for bench in benchmarks:
+        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
+        for inits in initsNum:
+            for opers in opersNum:
+                for dist in distribution:
+                    for threads in threadsNum:
+                        opts = (piwi_options if bench == 'piwi' else rocks_options)
+                        for opt in opts:
+                            opt = opt + ' ' + commonOps
+                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
+                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
+
+
+workloads = ['gets_only', 'puts_gets']
+initsNum = [keyrange]
+opersNum = ['60100000']
+distribution = ['zipfian', 'flurry']
+
+for workload in workloads:
+    for bench in benchmarks:
+        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
+        for inits in initsNum:
+            for opers in opersNum:
+                for dist in distribution:
+                    for threads in threadsNum:
+                        opts = (piwi_options if bench == 'piwi' else rocks_options)
+                        for opt in opts:
+                            opt = opt + ' ' + commonOps
+                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
+                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
+
+
+
+
+
+
+################################## The next bit run rocksdb with statistics#############################
+benchmarks = [ 'rocks']
+threadsNum = ['12']
+commonOps = ''
+piwi_commonOps = ''
+piwi_options = ['-munkBytesCapacity 196608 -maxMunks 400 -writeBufBytesCapacity 524288']
+rocks_options = ['-rocksdb_cachesize 1073741824 -statistics yes -stats_dump_period_sec 600']
+keyrange = '15000000'
 
 
 ################ puts, gets, puts-gets giving rocksdb smaller cache  #############
@@ -253,55 +306,10 @@ for workload in workloads:
                             popenAndCall(bench, workload, inits, opers, dist, threads, opt)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-benchmarks = ['piwi', 'rocks']
-threadsNum = ['12']
-commonOps = ''
-piwi_commonOps = ''
-piwi_options = ['-munkBytesCapacity 196608 -maxMunks 200 -writeBufBytesCapacity 524288']
-rocks_options = ['-rocksdb_cachesize 8140000000', '-rocksdb_cachesize 8140000000 -statistics yes -stats_dump_period_sec 600']
-keyrange = '15000000'
-
-
-
-
-
-################ big munks (128MB) and small munks (64KB)  #############
-workloads = ['puts_only']
-piwi_options = ['-munkBytesCapacity 5162220 -maxMunks 10 -writeBufBytesCapacity 524288 -initChunks 200', '-munkBytesCapacity 2560 -maxMunks 16384 -writeBufBytesCapacity 524288 -initChunks 400000']
-initsNum = ['0']
-opersNum = ['60100000']
-distribution = ['zipfian', 'flurry']
-for workload in workloads:
-    for bench in benchmarks:
-        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
-        for inits in initsNum:
-            for opers in opersNum:
-                for dist in distribution:
-                    for threads in threadsNum:
-                        opts = (piwi_options if bench == 'piwi' else rocks_options)
-                        for opt in opts:
-                            opt = opt + ' ' + commonOps
-                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
-                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
-
-############### scan #############
-workloads = ['scans_only', 'puts_scans']
+workloads = ['gets_only', 'puts_gets']
 initsNum = [keyrange]
 opersNum = ['60100000']
 distribution = ['zipfian', 'flurry']
-piwi_options = ['-munkBytesCapacity 196608 -maxMunks 200 -writeBufBytesCapacity 524288']
 
 for workload in workloads:
     for bench in benchmarks:
@@ -316,112 +324,8 @@ for workload in workloads:
                             print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
                             popenAndCall(bench, workload, inits, opers, dist, threads, opt)
 
-############### puts only #############
-#workloads = ['puts_only']
-#initsNum = ['0']
-#opersNum = ['60100000']
-#distribution = ['flurry']
-
-#for workload in workloads:
-#    for bench in benchmarks:
-#        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
-#        for inits in initsNum:
-#            for opers in opersNum:
-#                for threads in threadsNum:
-#                    for dist in distribution:
-#                        opts = (piwi_options if bench == 'piwi' else rocks_options)
-#                        for opt in opts:
-#                            opt = opt + ' ' + commonOps
-#                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
-#                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
-
-#############zipfian with half munk size #######################
-#threadsNum = ['12']
-#workloads = ['puts_gets', 'gets_only']
-#initsNum = [keyrange]
-#opersNum = ['60100000']
-#distribution = ['zipfian']
-#piwi_options = ['-munkBytesCapacity 98304 -maxMunks 400 -writeBufBytesCapacity 524288 -initChunks 10100']
-#benchmarks = ['piwi']
-
-#for workload in workloads:
-#    for bench in benchmarks:
-#        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
-#        for inits in initsNum:
-#            for opers in opersNum:
-#                for threads in threadsNum:
-#                    for dist in distribution:
-#                        opts = (piwi_options if bench == 'piwi' else rocks_options)
-#                        for opt in opts:
-#                            opt = opt + ' ' + commonOps
-#                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
-#                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
 
 
-#threadsNum = ['12']
-#workloads = ['puts_only']
-#initsNum = ['0']
-#opersNum = ['60100000']
-#distribution = ['zipfian']
-#piwi_options = ['-munkBytesCapacity 98304 -maxMunks 400 -writeBufBytesCapacity 524288 -initChunks 10100']
-#benchmarks = ['piwi']
-
-#for workload in workloads:
-#    for bench in benchmarks:
-#        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
-#        for inits in initsNum:
-#            for opers in opersNum:
-#                for threads in threadsNum:
-#                    for dist in distribution:
-#                        opts = (piwi_options if bench == 'piwi' else rocks_options)
-#                        for opt in opts:
-#                            opt = opt + ' ' + commonOps
-#                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
-#                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
-
-#############flurry with double munk size #######################
-#threadsNum = ['12']
-#workloads = ['puts_gets', 'gets_only']
-#initsNum = [keyrange]
-#opersNum = ['60100000']
-#distribution = ['flurry']
-#piwi_options = ['-munkBytesCapacity 393216 -maxMunks 100 -writeBufBytesCapacity 524288 -initChunks 3000']
-#benchmarks = ['piwi']
-
-#for workload in workloads:
-#    for bench in benchmarks:
-#        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
-#        for inits in initsNum:
-#            for opers in opersNum:
-#                for threads in threadsNum:
-#                    for dist in distribution:
-#                        opts = (piwi_options if bench == 'piwi' else rocks_options)
-#                        for opt in opts:
-#                            opt = opt + ' ' + commonOps
-#                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
-#                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
-
-
-#threadsNum = ['12']
-#workloads = ['puts_only']
-#initsNum = ['0']
-#opersNum = ['60100000']
-#distribution = ['flurry']
-#piwi_options = ['-munkBytesCapacity 393216 -maxMunks 100 -writeBufBytesCapacity 524288 -initChunks 3000']
-#benchmarks = ['rocks']
-
-#for workload in workloads:
-#    for bench in benchmarks:
-#        print('Running benchmark {0} with workload {1}, starting at {2}'.format(bench, workload, nowStr()))
-#        for inits in initsNum:
-#            for opers in opersNum:
-#                for threads in threadsNum:
-#                    for dist in distribution:
-#                        opts = (piwi_options if bench == 'piwi' else rocks_options)
-#                        for opt in opts:
-#                            opt = opt + ' ' + commonOps
-#                            print('\tinits: ' + inits + ', operations: ' + opers + ', distribution: ' + dist + ', threads: ' + threads + ', ops: ' + opt)
-#                            popenAndCall(bench, workload, inits, opers, dist, threads, opt)
 
 
 print('All done! @ {0}'.format(nowStr()))
