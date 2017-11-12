@@ -1,4 +1,4 @@
-# intermix puts, gets and rebalances
+# do only puts, and limit file capacities to have an occasional rebalance
 recordcount=1000000
 operationcount=10000000
 #workload=piwi/rocks/multi_rocks
@@ -6,9 +6,11 @@ operationcount=10000000
 readallfields=true
 
 readproportion=0
-updateproportion=99.9
-scanproportion=0.1
+updateproportion=0
+scanproportion=1
 insertproportion=0
+
+#threadcount=14
 
 requestdistribution=zipfian
 #requestdistribution=complex
@@ -29,7 +31,10 @@ munkKeyBytes=14
 exact_key_size=14
 fieldlength=800
 funkBytesCapacity=1000000000
-maxscanlength=1000
+maxscanlength=256
+histmin=0.0
+histmax=1.5
+restore_filename=RESTORE_zip
 
 #rocks specific
 rocksdb_syncwrites=true
@@ -38,6 +43,6 @@ write_buffer_size=536870912
 max_write_buffer_number=5
 min_write_buffer_number_to_merge=2
 
-#also available
+#als_ available
 #dbdir=/homes/erangi/ycsbc
 keyrange=15000000

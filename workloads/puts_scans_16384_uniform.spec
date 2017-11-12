@@ -5,9 +5,9 @@ operationcount=10000000
 
 readallfields=true
 
-readproportion=1
-updateproportion=0
-scanproportion=0
+readproportion=0
+updateproportion=0.9
+scanproportion=0.1
 insertproportion=0
 
 #threadcount=14
@@ -31,6 +31,10 @@ munkKeyBytes=14
 exact_key_size=14
 fieldlength=800
 funkBytesCapacity=1000000000
+maxscanlength=16384
+histmin=0.0
+histmax=15.0
+restore_filename=RESTORE_zip
 
 #rocks specific
 rocksdb_syncwrites=true

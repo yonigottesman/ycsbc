@@ -5,14 +5,14 @@ operationcount=10000000
 
 readallfields=true
 
-readproportion=0
+readproportion=1
 updateproportion=0
-scanproportion=1
+scanproportion=0
 insertproportion=0
 
 #threadcount=14
 
-requestdistribution=zipfian
+requestdistribution=flurry
 #requestdistribution=complex
 
 # the next setting wierdly control whether the input key will be hashed or not.
@@ -31,7 +31,9 @@ munkKeyBytes=14
 exact_key_size=14
 fieldlength=800
 funkBytesCapacity=1000000000
-maxscanlength=1000
+histmin=0.0
+histmax=0.3
+restore_filename=RESTORE_flu
 
 #rocks specific
 rocksdb_syncwrites=true
