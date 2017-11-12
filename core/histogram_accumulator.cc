@@ -6,6 +6,7 @@
  */
 
 #include "histogram_accumulator.h"
+#include <cmath>
 
 using namespace std;
 
@@ -26,6 +27,7 @@ HistogramAccumulator::HistogramAccumulator(const HistogramAccumulator& other) :
 
 void HistogramAccumulator::addVal(double val)
 {
+    ++totalOps;
     if (val < minVal)
     {
         ++counts[0]; // place low outliers in the first bucket
@@ -45,7 +47,25 @@ void HistogramAccumulator::addVal(double val)
     ++counts[bucket];
     if (val > maxVals[bucket])
     		maxVals[bucket] = val;
-    ++totalOps;
+}
+
+bool HistogramAccumulator::combineHistograms(const HistogramAccumulator& other)
+{
+    //ensure the histograms have the same range/size:
+   if (other.counts.size() != counts.size() ||
+           std::abs(minVal - other.minVal) >= 1/(10.0*counts.size()) ||
+           std::abs(maxVal - other.maxVal) >= 1/(10.0*counts.size())) {
+       return false;
+   }
+
+   totalOps += other.totalOps;
+   // add other's buckets to this
+   for (size_t i = 0; i < counts.size(); i++) {
+       counts[i] += other.counts[i];
+       if (other.maxVals[i] > maxVals[i])
+           maxVals[i] = other.maxVals[i];
+   }
+   return true;
 }
 
 } /* namespace ycsbc */

@@ -15,6 +15,7 @@
 #include "utils.h"
 #include "statistics.h"
 #include "histogram_accumulator.h"
+#include "core/myDebug.h"
 
 namespace ycsbc {
 
@@ -24,7 +25,7 @@ public:
 	Client(DB &db, CoreWorkload &wl, size_t opsNum) :
 			db_(db), workload_(wl),
 			stats(OPS_NUM, Statistics(opsNum)), scanStats(opsNum),
-			histograms(OPS_NUM, HistogramAccumulator(0.0, 2.5, 20000))
+			histograms(OPS_NUM, HistogramAccumulator(wl.histMin(), wl.histMax(), wl.histBuckets()))
 			// note: opsNum refer to all ops, while stats are gathered separately.
 			// depending on the mix, the actual number of events passed to a stats
 			// object can be much smaller than the declared.
@@ -44,7 +45,7 @@ public:
 	const Statistics& getScanStats() const {
 		return scanStats;
 	}
-	const HistogramAccumulator& getHistogram(Operation op) const {
+	HistogramAccumulator& getHistogram(Operation op) {
 	    return histograms[op];
 	}
     size_t getBytesRead() const {
@@ -200,6 +201,9 @@ inline int Client::TransactionUpdate() {
 inline int Client::TransactionInsert() {
   const std::string &table = workload_.NextTable();
   const std::string &key = workload_.NextSequenceKey();
+
+  DEB(std::cout << "k=" << key << std::endl;)
+
   std::vector<DB::KVPair> values;
   workload_.BuildValues(values);
   if (workload_.validateGets())

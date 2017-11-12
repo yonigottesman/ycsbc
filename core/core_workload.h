@@ -168,6 +168,17 @@ class CoreWorkload {
   /// if true, places the key in the value on puts and checks value on gets
   static const std::string VALIDATE_GETS_PROPERTY;
   static const std::string VALIDATE_GETS_DEFAULT;
+
+
+  //percentile min, max and buckets:
+  static const std::string MIN_VAL_HISTOGRAM_PROPERTY;
+  static const std::string MIN_VAL_HISTOGRAM_DEFAULT;
+  static const std::string MAX_VAL_HISTOGRAM_PROPERTY;
+  static const std::string MAX_VAL_HISTOGRAM_DEFAULT;
+  static const std::string BUCKETS_HISTOGRAM_PROPERTY;
+  static const std::string BUCKETS_HISTOGRAM_DEFAULT;
+
+
   ///
   /// Initialize the scenario.
   /// Called once, in the main client thread, before any operations are started.
@@ -204,6 +215,16 @@ class CoreWorkload {
     if (scan_len_chooser_) delete scan_len_chooser_;
   }
   
+  double histMin() {
+      return hist_min_;
+  }
+  double histMax() {
+      return hist_max_;
+  }
+  size_t histBuckets() {
+      return hist_buckets_;
+  }
+
  protected:
   static Generator<uint64_t> *GetFieldLenGenerator(const utils::Properties &p);
   std::string BuildKeyName(uint64_t key_num);
@@ -224,6 +245,9 @@ class CoreWorkload {
   size_t key_range_;
   size_t exact_key_size_;
   bool validateGets_;
+  double hist_min_;
+  double hist_max_;
+  size_t hist_buckets_;
 };
 
 inline std::string CoreWorkload::NextSequenceKey() {

@@ -33,6 +33,10 @@ class DB {
   /// Called once per DB client (thread); there is a single DB instance globally.
   ///
   virtual void Close() { }
+
+  // Do any operations needed after initialization phase. Can be used to get
+  // stats for initialization phase.
+  virtual void PostInit() {}
   ///
   /// Reads a record from the database.
   /// Field/value pairs from the result are stored in a vector.

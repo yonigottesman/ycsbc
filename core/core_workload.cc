@@ -84,6 +84,13 @@ const string CoreWorkload::EXACT_KEY_SIZE_DEFAULT = "24";
 const string CoreWorkload::VALIDATE_GETS_PROPERTY = "validateGets";
 const string CoreWorkload::VALIDATE_GETS_DEFAULT = "false";
 
+const string CoreWorkload::MIN_VAL_HISTOGRAM_PROPERTY = "histmin";
+const string CoreWorkload::MIN_VAL_HISTOGRAM_DEFAULT = "0.0";
+const string CoreWorkload::MAX_VAL_HISTOGRAM_PROPERTY = "histmax";
+const string CoreWorkload::MAX_VAL_HISTOGRAM_DEFAULT = "2.5";
+const string CoreWorkload::BUCKETS_HISTOGRAM_PROPERTY = "histbuckets";
+const string CoreWorkload::BUCKETS_HISTOGRAM_DEFAULT = "20000";
+
 void CoreWorkload::Init(const utils::Properties &p) {
   table_name_ = p.GetProperty(TABLENAME_PROPERTY,TABLENAME_DEFAULT);
   
@@ -119,6 +126,10 @@ void CoreWorkload::Init(const utils::Properties &p) {
   write_all_fields_ = utils::StrToBool(p.GetProperty(WRITE_ALL_FIELDS_PROPERTY,
                                                      WRITE_ALL_FIELDS_DEFAULT));
   
+  hist_min_ = std::stod(p.GetProperty(MIN_VAL_HISTOGRAM_PROPERTY, MIN_VAL_HISTOGRAM_DEFAULT));
+  hist_max_ = std::stod(p.GetProperty(MAX_VAL_HISTOGRAM_PROPERTY, MAX_VAL_HISTOGRAM_DEFAULT));
+  hist_buckets_ = std::stoll(p.GetProperty(BUCKETS_HISTOGRAM_PROPERTY, BUCKETS_HISTOGRAM_DEFAULT));
+
   if (p.GetProperty(INSERT_ORDER_PROPERTY, INSERT_ORDER_DEFAULT) == "hashed") {
     ordered_inserts_ = false;
   } else {

@@ -68,4 +68,8 @@ int PiwiDB::Update(const string &table, const string &key,
     return Insert(table, key, values);
 }
 
-} /* namespace ycsbc */
+void PiwiDB::PostInit(){
+	piwi::printStats();
+}
+
+}/* namespace ycsbc */

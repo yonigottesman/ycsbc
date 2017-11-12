@@ -32,6 +32,7 @@ const string WriteBufferSize = "write_buffer_size";
 const string MaxWriteBufferNumber = "max_write_buffer_number";
 const string MinWriteBufferToMerge = "min_write_buffer_number_to_merge";
 const string statistics = "statistics";
+const string existing = "use_existing_db";
 const string StatsDumpPeriod = "stats_dump_period_sec";
 
 const size_t defaultWriteBufferSize = 256*1024*1024;
@@ -39,6 +40,7 @@ const int defaultMaxWriteBufferNumber = 5;
 const int defaultMinWriteBufferToMerge = 2;
 const std::shared_ptr<rocksdb::Statistics> defaultStatistics = nullptr;
 const unsigned int defaultStatsDumpTime = 3600; //one hour
+const bool defaultExistingDb = false;
 
 bool useFsync(const map<string, string>& props)
 {
@@ -126,6 +128,7 @@ void setStatistics(const map<string, string>& props, rocksdb::Options& options)
     }
   //  return options.statistics;
 }
+
 
 rocksdb::CompressionType doCompress(const map<string, string>& props,
         rocksdb::CompressionType defaultCompress)

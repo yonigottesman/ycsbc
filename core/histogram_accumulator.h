@@ -22,6 +22,8 @@ class HistogramAccumulator
     const double minVal;
     const double maxVal;
     const double bucketRange;
+
+
 public:
     HistogramAccumulator(double minVal, double maxVal, size_t bucketsNum);
     HistogramAccumulator(const HistogramAccumulator& other);
@@ -42,6 +44,9 @@ public:
     double getMinVal() const {
         return minVal;
     }
+
+
+    bool combineHistograms(const HistogramAccumulator& other);
 };
 
 } /* namespace ycsbc */

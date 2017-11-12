@@ -81,7 +81,6 @@ string calculatePercentile(int percentile, const ycsbc::HistogramAccumulator& hi
 	}
 
 	stringstream ss;
-	ss << "Data elements collected: " << hist.getTotalOps() << endl;
 	ss << percentile << " percentile in: [" << hist.getMinVal() + hist.getBucketRange() * bottom << "s (ctr=";
 	ss << ctr - histArr[top] << ", max=:" << hist.getMaxVals()[bottom] << ") , " ;
 	ss << hist.getMinVal() + hist.getBucketRange() * top << "s (ctr=" << ctr << ", max=" << hist.getMaxVals()[top] << ")]" << endl;
@@ -131,54 +130,79 @@ string buildHistogram(const vector<double>& partMeans)
     return histToStr(histogram, partMeans.size(), minVal, bucketSize); //creates string for printing histogram
 }
 
-string buildOpsReport(const ycsbc::Client& client)
+string buildOpsReport(ycsbc::Client** clients, size_t threadsNum)
 {
 	stringstream ss;
 	ss << "Main thread statistics:\n";
 	for (int i = 0; i < ycsbc::OPS_NUM; ++i) //for every kind of operation (insert, read, update, scan, rmw)
 	{
-		double totalMean;
-		vector<double> partMeans;
-		const ycsbc::Statistics& stats = client.getStats((ycsbc::Operation)i); //get rolling means (uses boost accumulator). Only seems to save 1 out of every 100 results.
-		stats.getMeans(totalMean, partMeans);
-		if (isnormal(totalMean)) //Determines if the given floating point number arg is normal, i.e. is neither zero, subnormal, infinite, nor NaN.
-		{
-			string opName = ycsbc::OperationName((ycsbc::Operation)i);
-			ss << "Mean " << opName << " time (ms): " << totalMean << endl;
-//			ss << "Partial " << opName << " means: ";
-//			ss << fixed;
-//			for (double t : partMeans)
-//				ss << setprecision(2) << t << ", ";
-//			ss << "\n";
-		}
-		if (i == ycsbc::SCAN) //scan's means should take length of scan into account
-		{
-			double totalScanMean;
-			vector<double> partScanMeans;
-			const ycsbc::Statistics& scanStats = client.getScanStats(); //get rolling means (uses boost accumulator). Only seems to save 1 out of every 100 results.
-			scanStats.getMeans(totalScanMean, partScanMeans);
-			if (isnormal(totalScanMean)) //Determines if the given floating point number arg is normal, i.e. is neither zero, subnormal, infinite, nor NaN.
-			{
-				ss << "Mean scan results: " << totalScanMean << endl;
-//				ss << "Partial scan results means: ";
-//				for (double t : partScanMeans)
-//					ss << t << ", ";
-//				ss << "\n";
-			}
-		}
-	    if (!partMeans.empty())
+	    double totalMean = 0.0;
+	    int totalMeanCtr = 0;
+	    double totalScanMean = 0.0;
+	    int totalScanCtr = 0;
+	    auto& combinedHist = clients[0]->getHistogram((ycsbc::Operation)i);
+	    int histCtr = 1;
+	    for (size_t tId = 0; tId < threadsNum; tId++)
 	    {
-            ss << "Histogram based on average latency per window: " << endl;
-            ss << buildHistogram(partMeans); //builds histogram with 10 buckets, returns printable string representing the histogram
-        }
-        const auto& hist = client.getHistogram((ycsbc::Operation)i);
-        if (hist.getTotalOps() > 0)
-        {
-            ss << "Histogram based on predefined time buckets: " << endl; //shows histogram built by client. Currently defined to consider results range 0.0-1.0, with 40 buckets.
-        //    ss << histToStr(hist.getCounts(), hist.getTotalOps(), hist.getMinVal(), hist.getBucketRange());
-            for (int i = 10; i <= 90; i+=10){
-            		ss << calculatePercentile(i,hist);
+	        //accumulate means and histograms from all threads:
+            double threadTotalMean;
+            vector<double> partMeans;
+            const ycsbc::Statistics& stats = clients[tId]->getStats((ycsbc::Operation)i);
+            stats.getMeans(threadTotalMean, partMeans);
+            if (isnormal(threadTotalMean)) //Determines if the given floating point number arg is normal, i.e. is neither zero, subnormal, infinite, nor NaN.
+            {
+                totalMean += threadTotalMean;
+                totalMeanCtr++;
+                //string opName = ycsbc::OperationName((ycsbc::Operation)i);
+                //ss << "Mean " << opName << " time (ms): " << totalMean << endl;
             }
+            if (i == ycsbc::SCAN) //scan's means should take length of scan into account
+            {
+                double threadTotalScanMean;
+                vector<double> partScanMeans;
+                const ycsbc::Statistics& scanStats = clients[tId]->getScanStats(); //get rolling means (uses boost accumulator). Only seems to save 1 out of every 100 results.
+                scanStats.getMeans(threadTotalScanMean, partScanMeans);
+                if (isnormal(threadTotalScanMean)) //Determines if the given floating point number arg is normal, i.e. is neither zero, subnormal, infinite, nor NaN.
+                {
+                    totalScanMean+= threadTotalScanMean;
+                    totalScanCtr ++;
+                    //ss << "Mean scan results: " << totalScanMean << endl;
+                }
+
+            }
+            //if (!partMeans.empty())
+            //{
+            //    ss << "Histogram based on average latency per window (thread " << tId <<"): " << endl;
+            //    ss << buildHistogram(partMeans); //builds histogram with 10 buckets, returns printable string representing the histogram
+            //}
+            if (tId != 0) {
+                const auto& hist = clients[tId]->getHistogram((ycsbc::Operation)i);
+                if (combinedHist.combineHistograms(hist))
+                    histCtr++;
+                else
+                    ss << "failed to combine histogram of thread " << tId;
+            }
+	    }
+
+	    //print combined results of all threads:
+        if (isnormal(totalMean)) {
+            string opName = ycsbc::OperationName((ycsbc::Operation)i);
+            ss << "Mean " << opName << " time (ms): " << totalMean/totalMeanCtr << endl;
+        }
+        if (i == ycsbc::SCAN && isnormal(totalScanMean)) {
+            ss << "Mean scan results: " << totalScanMean/totalScanCtr << endl;
+        }
+
+        if (combinedHist.getTotalOps() > 0)
+        {
+            ss << "Percentiles calculated from histogram based on predefined time buckets (Combined from " << histCtr << " threads): " << endl;
+            ss << "Data elements collected: " << combinedHist.getTotalOps() << endl;
+            for (int i = 10; i <= 90; i+=10){
+                    ss << calculatePercentile(i,combinedHist);
+            }
+            ss << calculatePercentile(95, combinedHist);
+            ss << calculatePercentile(98, combinedHist);
+            ss << calculatePercentile(99, combinedHist);
             ss <<endl;
         }
 	}
@@ -223,20 +247,22 @@ void reportProgress(float prog)
 //threadOps - number of operations to be run by each thread.
 size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoading,
 		ycsbc::DB* db, ycsbc::CoreWorkload& wl, string& report,
-		exception_ptr& exceptionThrown)
+		exception_ptr& exceptionThrown, double& usDuration)
 {
 	size_t oks = 0, bytesRead = 0, bytesWritten = 0;
 	const size_t reportRange = threadOps / 200; //the thread defined as master (thread 0) will report every 1/100th of the workload it completes.
 	ycsbc::SysStats beginStats = ycsbc::getSysStats(); //SysStats count writes to disk, writes in general, user/sys time, calls to read/write
-//	ycsbc::Client* clients = new ycsbc::Client*[threadsNum];
-
+	ycsbc::Client** clients = new ycsbc::Client*[threadsNum];
+    utils::Timer<double> timer;
+    timer.Start();
 	//explanation on pragma omp parallel: https://www.ibm.com/support/knowledgecenter/en/SSGH2K_11.1.0/com.ibm.xlc111.aix.doc/compiler_ref/prag_omp_parallel.html
-#pragma omp parallel shared(db, wl, report, exceptionThrown) num_threads(threadsNum) \
+#pragma omp parallel shared(db, wl, report, exceptionThrown, clients) num_threads(threadsNum) \
 	reduction(+: oks) reduction(+: bytesRead) reduction(+: bytesWritten)
 	{
 		db->Init(); // per-thread initialization (does nothing in either rocksdb or piwi. Empty implementation)
-//		clients[omp_get_thread_num] = new ycsbc::Client(*db, wl, threadOps);
-		ycsbc::Client client(*db, wl, threadOps);
+		int tId = omp_get_thread_num();
+		clients[tId] = new ycsbc::Client(*db, wl, threadOps);
+		//ycsbc::Client client(*db, wl, threadOps);
 		const bool isMaster = omp_get_thread_num() == 0;
 		for (size_t i = 0; i < threadOps; ++i)
 		{
@@ -249,11 +275,11 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
                 	//calls the CoreGenerator created earlier and generates a key using Generator.next(). Calls the db's insert function to insert.
                 	//CoreWorkload::NextSequenceKey(),
                 	//counts bytes written
-                    oks += client.DoInsert();
+                    oks += clients[tId]->DoInsert();
                 } else {
                 	//starts a timer, generates the next op from the core_workload, performs it, ends the timer
                 	//counts bytes written, adds timing results to stats and histogram (stats and histogram logging isn't thread safe)
-                    oks += client.DoTransaction();
+                    oks += clients[tId]->DoTransaction();
 
                     DEB(cout <<i << " ins tid " << omp_get_thread_num() << endl;)
                 }
@@ -269,13 +295,19 @@ size_t runOps(const size_t threadsNum, const size_t threadOps,  const bool isLoa
 		    }
 		}
 		db->Close(); // per-thread cleanup (empty for piwi and rocksdb)
-		if (!isLoading && isMaster)
-			report = buildOpsReport(client); //histograms, latency
-        bytesRead = client.getBytesRead();
-        bytesWritten = client.getBytesWritten();
+	//	if (!isLoading && isMaster)
+	//		report = buildOpsReport(client); //histograms, latency
+        bytesRead = clients[tId]->getBytesRead();
+        bytesWritten = clients[tId]->getBytesWritten();
 	}
+	usDuration = timer.End();
+	if (!isLoading)
+	    report = buildOpsReport(clients, threadsNum);
 	report += buildIoReport(bytesRead, bytesWritten, beginStats); //adds more specs to output
-	//delete[] clients;
+	for (size_t i = 0; i < threadsNum; i++) {
+	    delete clients[i];
+	}
+	delete[] clients;
 	return oks;
 }
 
@@ -331,18 +363,21 @@ GDB(
   exception_ptr exceptionThrown{nullptr};
 
   //initialization of db - run Ops to intialize.
-  //todo nurit - see if can initialize sequentially/randomly and add timing.
-  size_t oks = runOps(num_threads, init_ops / num_threads, true, db, wl, statsReport, exceptionThrown);
+  double tempDuration;
+  size_t oks = runOps(num_threads, init_ops / num_threads, true, db, wl, statsReport, exceptionThrown, tempDuration);
   cerr << "Loaded " << oks << " records, running workload..." << endl;
 
   if (exceptionThrown == nullptr)
   {
       // Peforms transactions
-      const int total_ops = stoi(props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
-      utils::Timer<double> timer;
-      timer.Start();
-      oks = runOps(num_threads, total_ops / num_threads, false, db, wl, statsReport, exceptionThrown);
-      double usDuration = timer.End();
+      const int total_ops_requested = stoi(props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
+      const int ops_per_thread = total_ops_requested/num_threads;
+      const int total_ops = ops_per_thread*num_threads;
+      cerr << "Total ops requested: " << total_ops_requested << ", will actually perform " <<
+              total_ops << ", " << ops_per_thread << " per thread." << endl;
+
+      double usDuration;
+      oks = runOps(num_threads, ops_per_thread, false, db, wl, statsReport, exceptionThrown, usDuration);
       cerr << "[OVERALL] Run time: " << durToTime(usDuration) << endl;
       cerr << "[OVERALL] Throughput(ops/sec): " << (uint64_t)(total_ops / usDuration) << endl;
       cerr << "[OVERALL] Successful ops: " << oks << " out of " << total_ops << endl;

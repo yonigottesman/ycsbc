@@ -32,6 +32,9 @@ public:
 	/// Called once per DB client (thread); there is a single DB instance globally.
 	///
 //	void Close() override;
+	// Do any operations needed after initialization phase. Can be used to get
+	// stats for initialization phase.
+	void PostInit();
 
 	///
 	/// Inserts a record into the database.
